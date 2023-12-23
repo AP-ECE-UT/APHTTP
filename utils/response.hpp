@@ -1,5 +1,6 @@
-#ifndef __RESPONSE__
-#define __RESPONSE__
+#ifndef RESPONSE_HPP_INCLUDE
+#define RESPONSE_HPP_INCLUDE
+
 #include "../utils/include.hpp"
 #include "../utils/utilities.hpp"
 #include <string>
@@ -29,4 +30,4 @@ private:
   cimap headers;
 };
 
-#endif
+#endif // RESPONSE_HPP_INCLUDE

@@ -1,11 +1,11 @@
-#ifndef __MY_SERVER__
-#define __MY_SERVER__
+#ifndef MY_SERVER_HPP_INCLUDE
+#define MY_SERVER_HPP_INCLUDE
 
 #include "../server/server.hpp"
 
 class MyServer : public Server {
 public:
-  MyServer(int port = 5000);
+    MyServer(int port = 5000);
 };
 
-#endif
+#endif // MY_SERVER_HPP_INCLUDE
