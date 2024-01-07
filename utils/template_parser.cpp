@@ -21,8 +21,7 @@ const std::string localTemplate(const int parserNum) {
 TemplateParser::TemplateParser(string _filePath) {
     filePath = _filePath;
     variableCount = 0;
-    programName =
-        to_string(TemplateParser::lastParserNum) + SysCmd::fileExtention;
+    programName = to_string(TemplateParser::lastParserNum) + SysCmd::fileExtention;
     parserNum = TemplateParser::lastParserNum++;
     code = "";
     parseTemplate();
@@ -35,7 +34,7 @@ string TemplateParser::getHtml(map<string, string> _context) {
 }
 
 void TemplateParser::parseTemplate() {
-    string unparsedTemplate = readFile(filePath);
+    string unparsedTemplate = utils::readFile(filePath);
     int parsePointer = 0;
     while (parsePointer < (signed int)unparsedTemplate.size()) {
         int begin = findBeginOfCodeBlock(parsePointer, unparsedTemplate);
@@ -49,14 +48,16 @@ void TemplateParser::parseTemplate() {
     appendHTMLToCode(parsePointer, unparsedTemplate.size(), unparsedTemplate);
 }
 
-int TemplateParser::findBeginOfCodeBlock(int startPosition,
-                                         string& unparsedTemplate) {
-    return findSubStrPosition(unparsedTemplate, beginCodeBlockTag, startPosition);
+int TemplateParser::findBeginOfCodeBlock(int startPosition, string& unparsedTemplate) {
+    size_t found = unparsedTemplate.find(beginCodeBlockTag, startPosition);
+    if (found == std::string::npos) return -1;
+    return found;
 }
 
-int TemplateParser::findEndOfCodeBlock(int startPosition,
-                                       string& unparsedTemplate) {
-    return findSubStrPosition(unparsedTemplate, endCodeBlockTag, startPosition);
+int TemplateParser::findEndOfCodeBlock(int startPosition, string& unparsedTemplate) {
+    size_t found = unparsedTemplate.find(endCodeBlockTag, startPosition);
+    if (found == std::string::npos) return -1;
+    return found;
 }
 
 void TemplateParser::appendHTMLToCode(int begin, int end,
@@ -85,9 +86,8 @@ void TemplateParser::makeExecutableTemplate() {
 }
 
 void TemplateParser::makeLocalTemplate() {
-    string templateContent = readFile(filePath);
-    if (writeToFile(templateContent,
-                    outputFolder + "/" + localTemplate(parserNum)) < 0)
+    string templateContent = utils::readFile(filePath);
+    if (!utils::writeToFile(templateContent, outputFolder + "/" + localTemplate(parserNum)))
         throw Server::Exception("Can not write template to local " + outputFolder +
                                 "folder");
 }
@@ -100,11 +100,11 @@ void TemplateParser::generateCode() {
 }
 
 void TemplateParser::compileCode() {
-    if (writeToFile(code, toCompileFile) < 0)
+    if (!utils::writeToFile(code, toCompileFile))
         throw Server::Exception("Can not write generated template code!");
 
     string cmd = mkdirNoErrors(outputFolder) + " && " + cc + " " + toCompileFile +
-                 " " + utilitiesPath + " -o " + outputFolder + SysCmd::slash +
+                 " " + utilitiesPath + " " + strutilsPath + " -o " + outputFolder + SysCmd::slash +
                  programName + "&& " + SysCmd::rm + toCompileFile;
     string error = "Can not compile template " + filePath;
     TemplateUtils::runSystemCommand(cmd, error);
@@ -116,7 +116,7 @@ string TemplateParser::runGeneratedCode() {
     string error = "Error in running template  " + filePath;
     TemplateUtils::runSystemCommand(cmd, error);
 
-    string html = readFile(staticTemplate);
+    string html = utils::readFile(staticTemplate);
 
     cmd = SysCmd::rm + staticTemplate;
     error = "Error in deleting static template for  " + filePath;
@@ -131,12 +131,13 @@ void TemplateParser::addIncludesToCode() {
     include += "#include <map>\n";
     include += "#include <cstring>\n";
     include += "#include \"" + utilitiesHeaderPath + "\"\n";
+    include += "#include \"" + strutilsHeaderPath + "\"\n";
     include += "using namespace std;\n";
     code = include + "int main(int argc, char const *argv[])\n{\n" + code + "\n";
 }
 
 void TemplateParser::addReadFromTemplateToCode() {
-    code = "string __unparsedTemplate__ = readFile(\"" + outputFolder + "/" +
+    code = "string __unparsedTemplate__ = utils::readFile(\"" + outputFolder + "/" +
            localTemplate(parserNum) + "\");\n" + code;
 }
 
@@ -147,7 +148,7 @@ void TemplateParser::addContextMapToCode() {
     // `mapFile` should be changed if we want to handle requests
     //  in a multi-thread non-blocking way
     mapCode +=
-        "readMapFromFile(\"" + outputFolder + "/" + mapFile + "\", &context);\n";
+        "utils::readMapFromFile(\"" + outputFolder + "/" + mapFile + "\", context);\n";
     code = mapCode + code;
 }
 
@@ -185,8 +186,7 @@ void TemplateParser::TemplateUtils::runSystemCommand(string command,
 #endif
 }
 
-int TemplateParser::TemplateUtils::writeMapToFile(
-    std::string fname, std::map<std::string, std::string>* m) {
+int TemplateParser::TemplateUtils::writeMapToFile(std::string fname, std::map<std::string, std::string>* m) {
     int count = 0;
     if (m->empty())
         return 0;

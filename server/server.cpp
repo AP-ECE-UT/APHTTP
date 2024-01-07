@@ -13,6 +13,7 @@
 #include <map>
 #include <sstream>
 
+#include "../utils/strutils.hpp"
 #include "../utils/utilities.hpp"
 
 #ifdef _WIN32
@@ -65,8 +66,8 @@ public:
     Response* callback(Request* req) {
         Response* res = new Response(404);
         if (!notFoundErrPage.empty()) {
-            res->setHeader("Content-Type", "text/" + getExtension(notFoundErrPage));
-            res->setBody(readFile(notFoundErrPage.c_str()));
+            res->setHeader("Content-Type", "text/" + utils::getExtension(notFoundErrPage));
+            res->setBody(utils::readFile(notFoundErrPage.c_str()));
         }
         return res;
     }
@@ -114,20 +115,20 @@ Request* parseRawReq(char* headersRaw, size_t length) {
             BODY_BODY,
         };
         State state = REQ;
-        vector<string> headers = split(string(headersRaw), "\r\n", false);
+        vector<string> headers = utils::split(string(headersRaw), "\r\n");
         for (size_t i = 0; i < length; i++) {
             if (!headersRaw[i])
                 throw Server::Exception("Unsupported binary data in request.");
         }
         size_t realBodySize =
             string(headersRaw).size() -
-            split(string(headersRaw), "\r\n\r\n", false)[0].size() -
+            utils::split(string(headersRaw), "\r\n\r\n")[0].size() -
             string("\r\n\r\n").size();
         for (size_t headerIndex = 0; headerIndex < headers.size(); headerIndex++) {
             string line = headers[headerIndex];
             switch (state) {
             case REQ: {
-                vector<string> R = split(line, " ", false);
+                vector<string> R = utils::split(line, ' ');
                 if (R.size() != 3) {
                     throw Server::Exception("Invalid header (request line)");
                 }
@@ -135,11 +136,11 @@ Request* parseRawReq(char* headersRaw, size_t length) {
                 req->setPath(R[1]);
                 size_t pos = req->getPath().find('?');
                 if (pos != string::npos && pos != req->getPath().size() - 1) {
-                    vector<string> Q1 = split(req->getPath().substr(pos + 1), "&", false);
+                    vector<string> Q1 = utils::split(req->getPath().substr(pos + 1), '&');
                     for (vector<string>::size_type q = 0; q < Q1.size(); q++) {
-                        vector<string> Q2 = split(Q1[q], "=", false);
+                        vector<string> Q2 = utils::split(Q1[q], '=');
                         if (Q2.size() == 2)
-                            req->setQueryParam(Q2[0], Q2[1], false);
+                            req->setQueryParam(Q2[0], Q2[1]);
                         else
                             throw Server::Exception("Invalid query");
                     }
@@ -160,11 +161,11 @@ Request* parseRawReq(char* headersRaw, size_t length) {
                     }
                     break;
                 }
-                vector<string> R = split(line, ": ", false);
+                vector<string> R = utils::split(line, ": ");
                 if (R.size() != 2)
                     throw Server::Exception("Invalid header");
                 req->setHeader(R[0], R[1], false);
-                if (toLowerCase(R[0]) == toLowerCase("Content-Length"))
+                if (utils::tolower(R[0]) == utils::tolower("Content-Length"))
                     if (realBodySize != (size_t)atol(R[1].c_str()))
                         return NULL;
             } break;
@@ -173,9 +174,9 @@ Request* parseRawReq(char* headersRaw, size_t length) {
                 }
                 else if (req->getHeader("Content-Type") ==
                          "application/x-www-form-urlencoded") {
-                    vector<string> body = split(line, "&", false);
+                    vector<string> body = utils::split(line, '&');
                     for (size_t i = 0; i < body.size(); i++) {
-                        vector<string> field = split(body[i], "=", false);
+                        vector<string> field = utils::split(body[i], '=');
                         if (field.size() == 2)
                             req->setBodyParam(field[0], field[1], false);
                         else if (field.size() == 1)
@@ -204,15 +205,15 @@ Request* parseRawReq(char* headersRaw, size_t length) {
                     state = BODY_BODY;
                     break;
                 }
-                vector<string> R = split(line, ": ", false);
+                vector<string> R = utils::split(line, ": ");
                 if (R.size() != 2)
                     throw Server::Exception("Invalid header");
-                if (toLowerCase(R[0]) == toLowerCase("Content-Disposition")) {
-                    vector<string> A = split(R[1], "; ", false);
+                if (utils::tolower(R[0]) == utils::tolower("Content-Disposition")) {
+                    vector<string> A = utils::split(R[1], "; ");
                     for (size_t i = 0; i < A.size(); i++) {
-                        vector<string> attr = split(A[i], "=", false);
+                        vector<string> attr = utils::split(A[i], '=');
                         if (attr.size() == 2) {
-                            if (toLowerCase(attr[0]) == toLowerCase("name")) {
+                            if (utils::tolower(attr[0]) == utils::tolower("name")) {
                                 lastFieldKey = attr[1].substr(1, attr[1].size() - 2);
                             }
                         }
@@ -222,11 +223,11 @@ Request* parseRawReq(char* headersRaw, size_t length) {
                             throw Server::Exception("Invalid body attribute");
                     }
                 }
-                else if (toLowerCase(R[0]) == toLowerCase("Content-Type")) {
-                    if (toLowerCase(R[1]) == toLowerCase("application/octet-stream"))
+                else if (utils::tolower(R[0]) == utils::tolower("Content-Type")) {
+                    if (utils::tolower(R[1]) == utils::tolower("application/octet-stream"))
                         shouldBeEmpty = true;
-                    else if (toLowerCase(R[1].substr(0, R[1].find("/"))) !=
-                             toLowerCase("text"))
+                    else if (utils::tolower(R[1].substr(0, R[1].find("/"))) !=
+                             utils::tolower("text"))
                         throw Server::Exception("Unsupported file type: " + R[1]);
                 }
             } break;
@@ -389,15 +390,15 @@ ShowFile::ShowFile(string _filePath, string _fileType) {
 Response* ShowFile::callback(Request* req) {
     Response* res = new Response;
     res->setHeader("Content-Type", fileType);
-    res->setBody(readFile(filePath.c_str()));
+    res->setBody(utils::readFile(filePath.c_str()));
     return res;
 }
 
 ShowPage::ShowPage(string filePath)
-    : ShowFile(filePath, "text/" + getExtension(filePath)) {}
+    : ShowFile(filePath, "text/" + utils::getExtension(filePath)) {}
 
 ShowImage::ShowImage(string filePath)
-    : ShowFile(filePath, "image/" + getExtension(filePath)) {}
+    : ShowFile(filePath, "image/" + utils::getExtension(filePath)) {}
 
 void Server::setNotFoundErrPage(std::string notFoundErrPage) {
     delete notFoundHandler;

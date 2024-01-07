@@ -23,11 +23,11 @@ public:
     std::string getSessionId();
     void setSessionId(std::string);
     std::string getQueryString();
-    cimap getHeaders();
+    utils::CiMap getHeaders();
     std::string getHeadersString();
-    void setHeaders(std::string);
-    void setQuery(std::string);
-    void setBody(std::string);
+    void setHeaders(std::string headers);
+    void setQuery(std::string query);
+    void setBody(std::string body);
     void log();
     static void serializeToFile(Request* req, std::string filePath);
     static void deserializeFromFile(Request* req, std::string filePath);
@@ -35,9 +35,9 @@ public:
 private:
     std::string path;
     Method method;
-    cimap headers;
-    cimap query;
-    cimap body;
+    utils::CiMap headers;
+    utils::CiMap query;
+    utils::CiMap body;
 };
 
 #endif // REQUEST_HPP_INCLUDE

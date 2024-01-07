@@ -27,7 +27,7 @@ private:
 
   std::string phrase;
   std::string body;
-  cimap headers;
+  utils::CiMap headers;
 };
 
 #endif // RESPONSE_HPP_INCLUDE

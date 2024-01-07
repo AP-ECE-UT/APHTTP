@@ -30,6 +30,8 @@ const std::string beginCodeBlockTag = "<%";
 const std::string endCodeBlockTag = "%>";
 const std::string utilitiesHeaderPath = "utils/utilities.hpp";
 const std::string utilitiesPath = "utils/utilities.cpp";
+const std::string strutilsHeaderPath = "utils/strutils.hpp";
+const std::string strutilsPath = "utils/strutils.cpp";
 const std::string cc = "g++ -std=c++11 -Wall -pedantic";
 const std::string compileDirectory = "templateCompile";
 const std::string toCompileFile = "compiled.cpp";

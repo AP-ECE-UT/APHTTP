@@ -57,7 +57,7 @@ void Response::log(bool showBody) {
            to_string(code) + " " + phrase + NC + string("\n");
     log += K + string("Headers:") + NC + string("\n");
     for (auto it = headers.begin(); !headers.empty() && it != headers.end(); it++)
-        log += "  " + urlDecode(it->first) + ": " + urlDecode(it->second) +
+        log += "  " + utils::urlDecode(it->first) + ": " + utils::urlDecode(it->second) +
                string("\n");
     if (showBody)
         log += K + string("Body:\n") + NC + body + string("\n");

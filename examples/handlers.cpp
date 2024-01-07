@@ -15,7 +15,7 @@ Response* RandomNumberHandler::callback(Request* req) {
     body += to_string(rand() % 10 + 1);
     body += "</p>";
     body += "<p>";
-    body += "SeddionId: ";
+    body += "SessionId: ";
     body += req->getSessionId();
     body += "</p>";
     body += "</body>";
