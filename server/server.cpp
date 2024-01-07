@@ -83,23 +83,6 @@ public:
     }
 };
 
-void split(string str, string separator, int max, vector<string>& results) {
-    int i = 0;
-    size_t found = str.find_first_of(separator);
-
-    while (found != string::npos) {
-        if (found > 0)
-            results.push_back(str.substr(0, found));
-        str = str.substr(found + 1);
-        found = str.find_first_of(separator);
-
-        if (max > -1 && ++i == max)
-            break;
-    }
-    if (str.length() > 0)
-        results.push_back(str);
-}
-
 Request* parseRawReq(char* headersRaw, size_t length) {
     Request* req = nullptr;
     string boundary;
@@ -140,7 +123,7 @@ Request* parseRawReq(char* headersRaw, size_t length) {
                     for (vector<string>::size_type q = 0; q < Q1.size(); q++) {
                         vector<string> Q2 = utils::split(Q1[q], '=');
                         if (Q2.size() == 2)
-                            req->setQueryParam(Q2[0], Q2[1]);
+                            req->setQueryParam(Q2[0], Q2[1], false);
                         else
                             throw Server::Exception("Invalid query");
                     }
