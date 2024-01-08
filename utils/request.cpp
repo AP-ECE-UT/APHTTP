@@ -83,9 +83,9 @@ void Request::log() {
 
     string log;
     log += H + "------- Request --------" + NC + "\n";
-    log += K + "Method:\t" + NC + (method == Method::POST ? "POST" : "GET") + "\n";
-    log += K + "Path:\t" + NC + path + "\n";
-    log += K + "SessionId:\t" + NC + this->getSessionId() + "\n";
+    log += K + "Method: " + NC + (method == Method::POST ? "POST" : "GET") + "\n";
+    log += K + "Path:   " + NC + path + "\n";
+    log += K + "SessionId: " + NC + this->getSessionId() + "\n";
 
     log += K + "Headers:" + NC + "\n";
     for (auto it = headers.begin(); !headers.empty() && it != headers.end(); it++) {
@@ -100,7 +100,7 @@ void Request::log() {
     log += K + "Body:" + NC + "\n";
     for (auto it = body.begin(); !body.empty() && it != body.end(); it++) {
         string type = bodyTypes[it->first];
-        if (type == "application/x-www-urlencoded" || type == "text/plain") {
+        if (type == "application/x-www-form-urlencoded" || type == "text/plain") {
             log += "  " + utils::urlDecode(it->first) + ": " + utils::urlDecode(it->second) + "\n";
         }
         else {

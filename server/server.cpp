@@ -164,7 +164,7 @@ Request* parseRawReq(char* reqData, size_t length) {
                     b.pop_back(); // remove "\r\n" from start and end of each boundary
                     b.pop_back();
                     b.erase(b.begin(), b.begin() + 2);
-                    string boundaryContentType;
+                    string boundaryContentType = "text/plain";
 
                     size_t endOfBoundaryHeader = b.find("\r\n\r\n") + 4;
                     vector<string> abc = utils::split(b.substr(0, endOfBoundaryHeader - 4), "\r\n");
@@ -191,9 +191,6 @@ Request* parseRawReq(char* reqData, size_t length) {
                         else if (utils::tolower(R[0]) == utils::tolower("Content-Type")) {
                             boundaryContentType = utils::tolower(R[1]);
                         }
-                    }
-                    if (boundaryContentType.empty()) {
-                        boundaryContentType = "text/plain";
                     }
                     lastFieldValue = b.substr(endOfBoundaryHeader);
                     req->setBodyParam(lastFieldKey, lastFieldValue, boundaryContentType, false);
