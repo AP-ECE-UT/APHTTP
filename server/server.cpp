@@ -67,7 +67,7 @@ public:
         Response* res = new Response(404);
         if (!notFoundErrPage.empty()) {
             res->setHeader("Content-Type", "text/" + utils::getExtension(notFoundErrPage));
-            res->setBody(utils::readFile(notFoundErrPage.c_str()));
+            res->setBody(utils::readFile(notFoundErrPage));
         }
         return res;
     }
@@ -373,7 +373,7 @@ ShowFile::ShowFile(string _filePath, string _fileType) {
 Response* ShowFile::callback(Request* req) {
     Response* res = new Response;
     res->setHeader("Content-Type", fileType);
-    res->setBody(utils::readFile(filePath.c_str()));
+    res->setBody(utils::readFile(filePath));
     return res;
 }
 
