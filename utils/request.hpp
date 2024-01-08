@@ -16,7 +16,7 @@ public:
     std::string getQueryParam(std::string key);
     void setQueryParam(std::string key, std::string value, bool encode = true);
     std::string getBodyParam(std::string key);
-    void setBodyParam(std::string key, std::string value, bool encode = true);
+    void setBodyParam(std::string key, std::string value, std::string contentType = "text/plain", bool encode = true);
     std::string getHeader(std::string key);
     void setHeader(std::string key, std::string value, bool encode = true);
     std::string getBody();
@@ -38,6 +38,7 @@ private:
     utils::CiMap headers;
     utils::CiMap query;
     utils::CiMap body;
+    utils::CiMap bodyTypes;
 };
 
 #endif // REQUEST_HPP_INCLUDE

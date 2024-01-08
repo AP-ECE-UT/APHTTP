@@ -48,6 +48,11 @@ std::string urlEncode(const std::string& url) {
 
     for (size_t pos = 0; pos < url.size(); ++pos) {
         switch (url[pos]) {
+        default:
+            if (url[pos] >= 32 && url[pos] < 127) {
+                result += url[pos];
+                break;
+            }
         case '$':
         case '&':
         case '+':
@@ -75,11 +80,6 @@ std::string urlEncode(const std::string& url) {
             sprintf(encode_buf + 1, "%02X", url[pos]);
             result += encode_buf;
             break;
-        default:
-            if (url[pos] >= 32 && url[pos] < 127) {
-                result += url[pos];
-                break;
-            }
         }
     };
     return result;

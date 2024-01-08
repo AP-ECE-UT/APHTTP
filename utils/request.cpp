@@ -20,7 +20,12 @@ Request::Request(string method_) {
 
 string Request::getQueryParam(string key) { return utils::urlDecode(query[key]); }
 
-string Request::getBodyParam(string key) { return utils::urlDecode(body[key]); }
+string Request::getBodyParam(string key) {
+    if (bodyTypes[key] == "application/x-www-form-urlencoded") {
+        return utils::urlDecode(body[key]);
+    }
+    else return body[key];
+}
 
 string Request::getHeader(string key) { return utils::urlDecode(headers[key]); }
 
@@ -36,8 +41,9 @@ void Request::setQueryParam(string key, string value, bool encode) {
     query[key] = encode ? utils::urlEncode(value) : value;
 }
 
-void Request::setBodyParam(string key, string value, bool encode) {
+void Request::setBodyParam(string key, string value, string contentType, bool encode) {
     body[key] = encode ? utils::urlEncode(value) : value;
+    bodyTypes[key] = contentType;
 }
 
 void Request::setHeader(string key, string value, bool encode) {
@@ -74,27 +80,35 @@ void Request::log() {
     const string NC = "\033[0;39m";
     const string K = "\033[1m";
     const string H = "\033[33;1m";
-    string log = "";
-    log += H + string("------- Request --------") + NC + string("\n");
-    log +=
-        K + string("Method:\t") + NC + (method ? "POST" : "GET") + string("\n");
-    log += K + string("Path:\t") + NC + path + string("\n");
-    log += K + string("Headers:") + NC + string("\n");
-    for (auto it = headers.begin(); !headers.empty() && it != headers.end(); it++)
-        log += "  " + utils::urlDecode(it->first) + ": " + utils::urlDecode(it->second) +
-               string("\n");
-    log += "[ " + K + string("SessionId:\t") + NC + this->getSessionId() + " ]" +
-           string("\n");
-    log += K + string("Query:") + NC + string("\n");
-    for (auto it = query.begin(); !query.empty() && it != query.end(); it++)
-        log += "  " + utils::urlDecode(it->first) + ": " + utils::urlDecode(it->second) +
-               string("\n");
-    log += K + string("Body:") + NC + string("\n");
-    for (auto it = body.begin(); !body.empty() && it != body.end(); it++)
-        log += "  " + utils::urlDecode(it->first) + ": " + utils::urlDecode(it->second) +
-               string("\n");
-    log += H + string("------------------------") + NC + string("\n");
-    cerr << log << endl;
+
+    string log;
+    log += H + "------- Request --------" + NC + "\n";
+    log += K + "Method:\t" + NC + (method == Method::POST ? "POST" : "GET") + "\n";
+    log += K + "Path:\t" + NC + path + "\n";
+    log += K + "SessionId:\t" + NC + this->getSessionId() + "\n";
+
+    log += K + "Headers:" + NC + "\n";
+    for (auto it = headers.begin(); !headers.empty() && it != headers.end(); it++) {
+        log += "  " + utils::urlDecode(it->first) + ": " + utils::urlDecode(it->second) + "\n";
+    }
+
+    log += K + "Query:" + NC + "\n";
+    for (auto it = query.begin(); !query.empty() && it != query.end(); it++) {
+        log += "  " + utils::urlDecode(it->first) + ": " + utils::urlDecode(it->second) + "\n";
+    }
+
+    log += K + "Body:" + NC + "\n";
+    for (auto it = body.begin(); !body.empty() && it != body.end(); it++) {
+        string type = bodyTypes[it->first];
+        if (type == "application/x-www-urlencoded" || type == "text/plain") {
+            log += "  " + utils::urlDecode(it->first) + ": " + utils::urlDecode(it->second) + "\n";
+        }
+        else {
+            log += "  " + utils::urlDecode(it->first) + ": <BINARY DATA>\n";
+        }
+    }
+    log += H + "------------------------" + NC + "\n";
+    clog << log << endl;
 }
 
 utils::CiMap Request::getHeaders() {

@@ -90,14 +90,6 @@ Request* parseRawReq(char* reqData, size_t length) {
     string lastFieldValue;
     string reqDataStr(reqData, reqData + length);
     try {
-        enum State {
-            REQ,
-            HEADER,
-            BODY,
-            BODY_HEADER,
-            BODY_BODY,
-        };
-        State state = REQ;
         size_t endOfHeader = reqDataStr.find("\r\n\r\n");
         string reqHeader = reqDataStr.substr(0, endOfHeader);
         string reqBody = reqDataStr.substr(endOfHeader + 4, reqDataStr.size());
@@ -128,7 +120,6 @@ Request* parseRawReq(char* reqData, size_t length) {
             }
         }
         req->setPath(req->getPath().substr(0, pos));
-        state = HEADER;
 
         for (size_t headerIndex = 1; headerIndex < headers.size(); headerIndex++) {
             string line = headers[headerIndex];
@@ -138,7 +129,7 @@ Request* parseRawReq(char* reqData, size_t length) {
             req->setHeader(R[0], R[1], false);
             if (utils::tolower(R[0]) == utils::tolower("Content-Length"))
                 if (realBodySize != (size_t)atol(R[1].c_str()))
-                    throw Server::Exception("Content-Length header does not match payload size");
+                    return nullptr;
         }
 
         string contentType = req->getHeader("Content-Type");
@@ -150,9 +141,9 @@ Request* parseRawReq(char* reqData, size_t length) {
                     for (size_t i = 0; i < body.size(); i++) {
                         vector<string> field = utils::split(body[i], '=');
                         if (field.size() == 2)
-                            req->setBodyParam(field[0], field[1], false);
+                            req->setBodyParam(field[0], field[1], "application/x-www-form-urlencoded", false);
                         else if (field.size() == 1)
-                            req->setBodyParam(field[0], "", false);
+                            req->setBodyParam(field[0], "", "application/x-www-form-urlencoded", false);
                         else
                             throw Server::Exception("Invalid body");
                     }
@@ -173,7 +164,7 @@ Request* parseRawReq(char* reqData, size_t length) {
                     b.pop_back(); // remove "\r\n" from start and end of each boundary
                     b.pop_back();
                     b.erase(b.begin(), b.begin() + 2);
-                    state = BODY_HEADER;
+                    string boundaryContentType;
 
                     size_t endOfBoundaryHeader = b.find("\r\n\r\n") + 4;
                     vector<string> abc = utils::split(b.substr(0, endOfBoundaryHeader - 4), "\r\n");
@@ -198,14 +189,14 @@ Request* parseRawReq(char* reqData, size_t length) {
                             }
                         }
                         else if (utils::tolower(R[0]) == utils::tolower("Content-Type")) {
-                            // if (utils::tolower(R[1]) == utils::tolower("application/octet-stream"))
-                            //     contentTypeIsOctetStream = true;
-                            // else if (utils::tolower(R[1].substr(0, R[1].find("/"))) != utils::tolower("text"))
-                            //     throw Server::Exception("Unsupported file type: " + R[1]);
+                            boundaryContentType = utils::tolower(R[1]);
                         }
                     }
+                    if (boundaryContentType.empty()) {
+                        boundaryContentType = "text/plain";
+                    }
                     lastFieldValue = b.substr(endOfBoundaryHeader);
-                    req->setBodyParam(lastFieldKey, lastFieldValue, false);
+                    req->setBodyParam(lastFieldKey, lastFieldValue, boundaryContentType, false);
                 }
             }
             else {
@@ -286,8 +277,7 @@ void Server::run() {
             size_t recv_len, recv_total_len = 0;
             Request* req = NULL;
             while (!req) {
-                recv_len =
-                    recv(newsc, data + recv_total_len, BUFSIZE - recv_total_len, 0);
+                recv_len = recv(newsc, data + recv_total_len, BUFSIZE - recv_total_len, 0);
                 if (recv_len > 0) {
                     recv_total_len += recv_len;
                     data[recv_total_len >= 0 ? recv_total_len : 0] = 0;
