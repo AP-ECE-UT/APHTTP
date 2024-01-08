@@ -83,12 +83,12 @@ public:
     }
 };
 
-Request* parseRawReq(char* headersRaw, size_t length) {
+Request* parseRawReq(char* reqData, size_t length) {
     Request* req = nullptr;
     string boundary;
     string lastFieldKey;
     string lastFieldValue;
-    bool shouldBeEmpty;
+    string reqDataStr(reqData, reqData + length);
     try {
         enum State {
             REQ,
@@ -98,66 +98,55 @@ Request* parseRawReq(char* headersRaw, size_t length) {
             BODY_BODY,
         };
         State state = REQ;
-        vector<string> headers = utils::split(string(headersRaw), "\r\n");
-        for (size_t i = 0; i < length; i++) {
-            if (!headersRaw[i])
-                throw Server::Exception("Unsupported binary data in request.");
+        size_t endOfHeader = reqDataStr.find("\r\n\r\n");
+        string reqHeader = reqDataStr.substr(0, endOfHeader);
+        string reqBody = reqDataStr.substr(endOfHeader + 4, reqDataStr.size());
+        if (endOfHeader == string::npos) {
+            throw Server::Exception("End of request header not found.");
         }
-        size_t realBodySize =
-            string(headersRaw).size() -
-            utils::split(string(headersRaw), "\r\n\r\n")[0].size() -
-            string("\r\n\r\n").size();
-        for (size_t headerIndex = 0; headerIndex < headers.size(); headerIndex++) {
+        vector<string> headers = utils::split(reqHeader, "\r\n");
+        if (reqHeader.find('\0') != string::npos) {
+            throw Server::Exception("Binary data in header.");
+        }
+        size_t realBodySize = length - endOfHeader - 4; // string("\r\n\r\n").size();
+
+        vector<string> R = utils::split(headers[0], ' ');
+        if (R.size() != 3) {
+            throw Server::Exception("Invalid header (request line)");
+        }
+        req = new Request(R[0]);
+        req->setPath(R[1]);
+        size_t pos = req->getPath().find('?');
+        if (pos != string::npos && pos != req->getPath().size() - 1) {
+            vector<string> Q1 = utils::split(req->getPath().substr(pos + 1), '&');
+            for (vector<string>::size_type q = 0; q < Q1.size(); q++) {
+                vector<string> Q2 = utils::split(Q1[q], '=');
+                if (Q2.size() == 2)
+                    req->setQueryParam(Q2[0], Q2[1], false);
+                else
+                    throw Server::Exception("Invalid query");
+            }
+        }
+        req->setPath(req->getPath().substr(0, pos));
+        state = HEADER;
+
+        for (size_t headerIndex = 1; headerIndex < headers.size(); headerIndex++) {
             string line = headers[headerIndex];
-            switch (state) {
-            case REQ: {
-                vector<string> R = utils::split(line, ' ');
-                if (R.size() != 3) {
-                    throw Server::Exception("Invalid header (request line)");
-                }
-                req = new Request(R[0]);
-                req->setPath(R[1]);
-                size_t pos = req->getPath().find('?');
-                if (pos != string::npos && pos != req->getPath().size() - 1) {
-                    vector<string> Q1 = utils::split(req->getPath().substr(pos + 1), '&');
-                    for (vector<string>::size_type q = 0; q < Q1.size(); q++) {
-                        vector<string> Q2 = utils::split(Q1[q], '=');
-                        if (Q2.size() == 2)
-                            req->setQueryParam(Q2[0], Q2[1], false);
-                        else
-                            throw Server::Exception("Invalid query");
-                    }
-                }
-                req->setPath(req->getPath().substr(0, pos));
-                state = HEADER;
-            } break;
-            case HEADER: {
-                if (line == "") {
-                    state = BODY;
-                    if (req->getHeader("Content-Type")
-                            .substr(0, string("multipart/form-data").size()) ==
-                        "multipart/form-data") {
-                        boundary =
-                            req->getHeader("Content-Type")
-                                .substr(req->getHeader("Content-Type").find("boundary=") +
-                                        string("boundary=").size());
-                    }
-                    break;
-                }
-                vector<string> R = utils::split(line, ": ");
-                if (R.size() != 2)
-                    throw Server::Exception("Invalid header");
-                req->setHeader(R[0], R[1], false);
-                if (utils::tolower(R[0]) == utils::tolower("Content-Length"))
-                    if (realBodySize != (size_t)atol(R[1].c_str()))
-                        return NULL;
-            } break;
-            case BODY: {
-                if (req->getHeader("Content-Type") == "") {
-                }
-                else if (req->getHeader("Content-Type") ==
-                         "application/x-www-form-urlencoded") {
-                    vector<string> body = utils::split(line, '&');
+            vector<string> R = utils::split(line, ": ");
+            if (R.size() != 2)
+                throw Server::Exception("Invalid header");
+            req->setHeader(R[0], R[1], false);
+            if (utils::tolower(R[0]) == utils::tolower("Content-Length"))
+                if (realBodySize != (size_t)atol(R[1].c_str()))
+                    throw Server::Exception("Content-Length header does not match payload size");
+        }
+
+        string contentType = req->getHeader("Content-Type");
+        if (realBodySize != 0 && !contentType.empty()) {
+            if (utils::startsWith(contentType, "application/x-www-form-urlencoded")) {
+                vector<string> urlencodedParts = utils::split(reqBody, "\r\n");
+                for (const string& part : urlencodedParts) {
+                    vector<string> body = utils::split(part, '&');
                     for (size_t i = 0; i < body.size(); i++) {
                         vector<string> field = utils::split(body[i], '=');
                         if (field.size() == 2)
@@ -168,76 +157,67 @@ Request* parseRawReq(char* headersRaw, size_t length) {
                             throw Server::Exception("Invalid body");
                     }
                 }
-                else if (req->getHeader("Content-Type")
-                             .substr(0, string("multipart/form-data").size()) ==
-                         "multipart/form-data") {
-                    if (line == "--" + boundary || line == "--" + boundary + "--") {
-                        lastFieldKey = "";
-                        lastFieldValue = "";
-                        shouldBeEmpty = false;
-                        state = BODY_HEADER;
-                    }
+            }
+            else if (utils::startsWith(contentType, "multipart/form-data")) {
+                boundary = contentType.substr(contentType.find("boundary=") + 9);
+                size_t firstBoundary = reqBody.find("--" + boundary);
+                if (firstBoundary == string::npos) {
+                    throw Server::Exception("Boundary data not found.");
                 }
-                else {
-                    throw Server::Exception("Unsupported body type: " +
-                                            req->getHeader("Content-Type"));
-                }
-            } break;
-            case BODY_HEADER: {
-                if (line == "") {
-                    state = BODY_BODY;
-                    break;
-                }
-                vector<string> R = utils::split(line, ": ");
-                if (R.size() != 2)
-                    throw Server::Exception("Invalid header");
-                if (utils::tolower(R[0]) == utils::tolower("Content-Disposition")) {
-                    vector<string> A = utils::split(R[1], "; ");
-                    for (size_t i = 0; i < A.size(); i++) {
-                        vector<string> attr = utils::split(A[i], '=');
-                        if (attr.size() == 2) {
-                            if (utils::tolower(attr[0]) == utils::tolower("name")) {
-                                lastFieldKey = attr[1].substr(1, attr[1].size() - 2);
+                reqBody.erase(reqBody.begin(), reqBody.begin() + firstBoundary + 2 + boundary.size());
+
+                vector<string> boundaries = utils::split(reqBody, "--" + boundary);
+                boundaries.pop_back();
+
+                for (string b : boundaries) {
+                    b.pop_back(); // remove "\r\n" from start and end of each boundary
+                    b.pop_back();
+                    b.erase(b.begin(), b.begin() + 2);
+                    state = BODY_HEADER;
+
+                    size_t endOfBoundaryHeader = b.find("\r\n\r\n") + 4;
+                    vector<string> abc = utils::split(b.substr(0, endOfBoundaryHeader - 4), "\r\n");
+                    for (const string& line : abc) {
+                        if (line.empty()) {
+                            break;
+                        }
+                        vector<string> R = utils::split(line, ": ");
+                        if (R.size() != 2) throw Server::Exception("Invalid header");
+                        if (utils::tolower(R[0]) == utils::tolower("Content-Disposition")) {
+                            vector<string> A = utils::split(R[1], "; ");
+                            for (size_t i = 0; i < A.size(); i++) {
+                                vector<string> attr = utils::split(A[i], '=');
+                                if (attr.size() == 2) {
+                                    if (utils::tolower(attr[0]) == utils::tolower("name")) {
+                                        lastFieldKey = attr[1].substr(1, attr[1].size() - 2);
+                                    }
+                                }
+                                else if (attr.size() != 1) {
+                                    throw Server::Exception("Invalid body attribute");
+                                }
                             }
                         }
-                        else if (attr.size() == 1) {
+                        else if (utils::tolower(R[0]) == utils::tolower("Content-Type")) {
+                            // if (utils::tolower(R[1]) == utils::tolower("application/octet-stream"))
+                            //     contentTypeIsOctetStream = true;
+                            // else if (utils::tolower(R[1].substr(0, R[1].find("/"))) != utils::tolower("text"))
+                            //     throw Server::Exception("Unsupported file type: " + R[1]);
                         }
-                        else
-                            throw Server::Exception("Invalid body attribute");
                     }
+                    lastFieldValue = b.substr(endOfBoundaryHeader);
+                    req->setBodyParam(lastFieldKey, lastFieldValue, false);
                 }
-                else if (utils::tolower(R[0]) == utils::tolower("Content-Type")) {
-                    if (utils::tolower(R[1]) == utils::tolower("application/octet-stream"))
-                        shouldBeEmpty = true;
-                    else if (utils::tolower(R[1].substr(0, R[1].find("/"))) !=
-                             utils::tolower("text"))
-                        throw Server::Exception("Unsupported file type: " + R[1]);
-                }
-            } break;
-            case BODY_BODY: {
-                if (line == "--" + boundary || line == "--" + boundary + "--") {
-                    req->setBodyParam(lastFieldKey,
-                                      lastFieldValue.substr(string("\r\n").size()),
-                                      false);
-                    lastFieldKey = "";
-                    lastFieldValue = "";
-                    state = BODY_HEADER;
-                    shouldBeEmpty = false;
-                }
-                else if (shouldBeEmpty && !line.empty())
-                    throw Server::Exception("Unsupported file type: " +
-                                            string("application/octet-stream"));
-                else
-                    lastFieldValue += "\r\n" + line;
-            } break;
+            }
+            else {
+                throw Server::Exception("Unsupported body type: " + contentType);
             }
         }
     }
     catch (const Server::Exception&) {
         throw;
     }
-    catch (...) {
-        throw Server::Exception("Error on parsing request");
+    catch (const std::exception& e) {
+        throw Server::Exception("Error on parsing request: " + std::string(e.what()));
     }
     return req;
 }

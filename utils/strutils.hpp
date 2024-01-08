@@ -17,6 +17,7 @@ std::string toupper(const std::string& str);
 std::string tolower(const std::string& str);
 
 void replaceAll(std::string& str, const std::string& from, const std::string& to);
+bool startsWith(const std::string& str, const std::string& s);
 
 } // namespace strutils
 

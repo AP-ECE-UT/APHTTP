@@ -73,4 +73,9 @@ void replaceAll(std::string& str, const std::string& from, const std::string& to
     }
 }
 
+bool startsWith(const std::string& str, const std::string& s) {
+    return str.size() >= s.size() &&
+           std::equal(s.begin(), s.end(), str.begin());
+}
+
 } // namespace utils
