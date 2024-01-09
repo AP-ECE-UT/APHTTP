@@ -1,7 +1,11 @@
-#ifndef __INCLUDE__
-#define __INCLUDE__
+#ifndef INCLUDE_HPP_INCLUDE
+#define INCLUDE_HPP_INCLUDE
 
-#define BUFSIZE 4145152
-enum Method { GET, POST };
+constexpr int BUFSIZE = 10 * 1024 * 1024; // 10MB
 
-#endif
+enum Method {
+    GET,
+    POST
+};
+
+#endif // INCLUDE_HPP_INCLUDE

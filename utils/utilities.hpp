@@ -1,40 +1,29 @@
-#ifndef __UTILILITES__
-#define __UTILILITES__
-#include <cstring>
+#ifndef UTILITIES_HPP_INCLUDE
+#define UTILITIES_HPP_INCLUDE
+
 #include <map>
 #include <string>
-#include <vector>
 
-#define BUFFER_SIZE 4145152
+#include "include.hpp"
 
-struct comp {
-  bool operator()(const std::string &lhs, const std::string &rhs) const;
+namespace utils {
+
+struct StringInsensitiveComp {
+    bool operator()(const std::string& lhs, const std::string& rhs) const;
 };
 
-typedef std::map<std::string, std::string, comp>
-    cimap; // Case-Insensitive <string, string> map
+using CiMap = std::map<std::string, std::string, StringInsensitiveComp>;
 
-std::string readFile(const char *filename);
-std::string readFile(std::string filename);
-std::string getExtension(std::string filePath);
-void printVector(std::vector<std::string>);
-std::vector<std::string> split(std::string s, std::string d, bool trim = true);
+std::string readFile(const std::string& filename);
+bool writeToFile(const std::string& str, const std::string& filename);
+std::string getExtension(const std::string& filename);
 
-std::string urlEncode(std::string const &);
-std::string urlDecode(std::string const &);
+std::string urlEncode(const std::string& url);
+std::string urlDecode(const std::string& url);
 
-std::string toLowerCase(std::string);
+CiMap getCimapFromString(const std::string& str);
+int readMapFromFile(const std::string& filename, std::map<std::string, std::string>& m);
 
-std::vector<std::string> tokenize(std::string const &, char delimiter);
-void replaceAll(std::string &str, const std::string &from,
-                const std::string &to);
+} // namespace utils
 
-int findSubStrPosition(std::string &str, std::string const &subStr,
-                       int const &pos);
-int writeObjectToFile(const char *object, int sizem,
-                      std::string const &filePath);
-int writeToFile(std::string const &str, std::string const &filePath);
-int readMapFromFile(std::string fname, std::map<std::string, std::string> *m);
-
-cimap getCimapFromString(std::string);
-#endif
+#endif // UTILITIES_HPP_INCLUDE
