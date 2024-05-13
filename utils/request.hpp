@@ -2,6 +2,7 @@
 #define REQUEST_HPP_INCLUDE
 
 #include <string>
+#include <unordered_map>
 
 #include "utilities.hpp"
 
@@ -9,7 +10,9 @@ class Request {
 public:
     enum class Method {
         GET,
-        POST
+        POST,
+        PUT,
+        DEL,
     };
 
     Request(Method method);
@@ -39,6 +42,8 @@ private:
     utils::CiMap query;
     utils::CiMap body;
     utils::CiMap bodyTypes;
+
+    static const std::unordered_map<std::string, Method> methodMap;
 };
 
 #endif // REQUEST_HPP_INCLUDE

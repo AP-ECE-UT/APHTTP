@@ -58,10 +58,14 @@ class Server {
 public:
     Server(int port = 5000);
     ~Server();
+
     void run();
-    void get(std::string path, RequestHandler* handler);
-    void post(std::string path, RequestHandler* handler);
-    void setNotFoundErrPage(std::string);
+
+    void get(const std::string& path, RequestHandler* handler);
+    void post(const std::string& path, RequestHandler* handler);
+    void put(const std::string& path, RequestHandler* handler);
+    void del(const std::string& path, RequestHandler* handler);
+    void setNotFoundErrPage(const std::string& notFoundErrPage);
 
     class Exception : public std::exception {
     public:
@@ -78,6 +82,8 @@ private:
     int port;
     std::vector<Route*> routes;
     RequestHandler* notFoundHandler;
+
+    void mapRequest(const std::string& path, RequestHandler* handler, Request::Method method);
 };
 
 #endif // SERVER_HPP_INCLUDE

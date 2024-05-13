@@ -244,16 +244,26 @@ Server::Server(int _port) : port(_port) {
     }
 }
 
-void Server::get(string path, RequestHandler* handler) {
-    Route* route = new Route(Request::Method::GET, path);
+void Server::mapRequest(const string& path, RequestHandler* handler, Request::Method method) {
+    Route* route = new Route(method, path);
     route->setHandler(handler);
     routes.push_back(route);
 }
 
-void Server::post(string path, RequestHandler* handler) {
-    Route* route = new Route(Request::Method::POST, path);
-    route->setHandler(handler);
-    routes.push_back(route);
+void Server::get(const std::string& path, RequestHandler* handler) {
+    mapRequest(path, handler, Request::Method::GET);
+}
+
+void Server::post(const std::string& path, RequestHandler* handler) {
+    mapRequest(path, handler, Request::Method::POST);
+}
+
+void Server::put(const std::string& path, RequestHandler* handler) {
+    mapRequest(path, handler, Request::Method::PUT);
+}
+
+void Server::del(const std::string& path, RequestHandler* handler) {
+    mapRequest(path, handler, Request::Method::DEL);
 }
 
 void Server::run() {
@@ -350,7 +360,7 @@ ShowPage::ShowPage(string filePath)
 ShowImage::ShowImage(string filePath)
     : ShowFile(filePath, "image/" + utils::getExtension(filePath)) {}
 
-void Server::setNotFoundErrPage(std::string notFoundErrPage) {
+void Server::setNotFoundErrPage(const std::string& notFoundErrPage) {
     delete notFoundHandler;
     notFoundHandler = new NotFoundHandler(notFoundErrPage);
 }

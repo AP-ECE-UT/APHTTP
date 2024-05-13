@@ -1,22 +1,27 @@
 #include "request.hpp"
 
 #include <algorithm>
-#include <fstream>
 #include <iostream>
-#include <map>
+#include <unordered_map>
 #include <vector>
 
 #include "strutils.hpp"
 
+const std::unordered_map<std::string, Request::Method> Request::methodMap = {
+    {"GET", Request::Method::GET},
+    {"POST", Request::Method::POST},
+    {"PUT", Request::Method::PUT},
+    {"DEL", Request::Method::DEL},
+};
+
 Request::Request(Method method_)
     : method(method_) {}
 
-Request::Request(const std::string& method_) {
-    if (method_ == "GET") {
-        method = Method::GET;
-    }
-    else if (method_ == "POST") {
-        method = Method::POST;
+Request::Request(const std::string& method_)
+    : Request(Method::GET) {
+    auto itr = methodMap.find(method_);
+    if (itr != methodMap.end()) {
+        method = itr->second;
     }
 }
 

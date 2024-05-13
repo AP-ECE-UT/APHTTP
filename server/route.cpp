@@ -2,19 +2,23 @@
 
 #include "server.hpp"
 
-using namespace std;
+Route::Route(Request::Method _method, const std::string& _path)
+    : method(_method),
+      path(_path),
+      handler(nullptr) {}
 
-Route::Route(Request::Method _method, string _path) {
-    method = _method;
-    path = _path;
+Route::~Route() {
+    delete handler;
 }
 
-void Route::setHandler(RequestHandler* _handler) { handler = _handler; }
-
-bool Route::isMatch(Request::Method _method, string url) {
-    return (url == path) && (_method == method);
+void Route::setHandler(RequestHandler* _handler) {
+    handler = _handler;
 }
 
-Response* Route::handle(Request* req) { return handler->callback(req); }
+Response* Route::handle(Request* req) {
+    return handler->callback(req);
+}
 
-Route::~Route() { delete handler; }
+bool Route::isMatch(Request::Method _method, const std::string& url) {
+    return (_method == method) && (url == path);
+}
