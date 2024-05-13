@@ -11,14 +11,14 @@ class RequestHandler;
 
 class Route {
 private:
-    Method method;
+    Request::Method method;
     std::string path;
     RequestHandler* handler;
 
 public:
-    Route(Method _method, std::string _path);
+    Route(Request::Method _method, std::string _path);
     ~Route();
-    bool isMatch(Method, std::string url);
+    bool isMatch(Request::Method, std::string url);
     Response* handle(Request* req);
     void setHandler(RequestHandler* _handler);
 };

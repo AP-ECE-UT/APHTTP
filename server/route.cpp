@@ -4,14 +4,14 @@
 
 using namespace std;
 
-Route::Route(Method _method, string _path) {
+Route::Route(Request::Method _method, string _path) {
     method = _method;
     path = _path;
 }
 
 void Route::setHandler(RequestHandler* _handler) { handler = _handler; }
 
-bool Route::isMatch(Method _method, string url) {
+bool Route::isMatch(Request::Method _method, string url) {
     return (url == path) && (_method == method);
 }
 
