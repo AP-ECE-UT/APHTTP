@@ -96,13 +96,13 @@ Request* parseRawReq(char* reqData, size_t length) {
         if (endOfHeader == string::npos) {
             throw Server::Exception("End of request header not found.");
         }
-        vector<string> headers = utils::split(reqHeader, "\r\n");
+        vector<string> headers = strutils::split(reqHeader, "\r\n");
         if (reqHeader.find('\0') != string::npos) {
             throw Server::Exception("Binary data in header.");
         }
         size_t realBodySize = length - endOfHeader - 4; // string("\r\n\r\n").size();
 
-        vector<string> R = utils::split(headers[0], ' ');
+        vector<string> R = strutils::split(headers[0], ' ');
         if (R.size() != 3) {
             throw Server::Exception("Invalid header (request line)");
         }
@@ -110,9 +110,9 @@ Request* parseRawReq(char* reqData, size_t length) {
         req->setPath(R[1]);
         size_t pos = req->getPath().find('?');
         if (pos != string::npos && pos != req->getPath().size() - 1) {
-            vector<string> Q1 = utils::split(req->getPath().substr(pos + 1), '&');
+            vector<string> Q1 = strutils::split(req->getPath().substr(pos + 1), '&');
             for (vector<string>::size_type q = 0; q < Q1.size(); q++) {
-                vector<string> Q2 = utils::split(Q1[q], '=');
+                vector<string> Q2 = strutils::split(Q1[q], '=');
                 if (Q2.size() == 2)
                     req->setQueryParam(Q2[0], Q2[1], false);
                 else
@@ -123,23 +123,23 @@ Request* parseRawReq(char* reqData, size_t length) {
 
         for (size_t headerIndex = 1; headerIndex < headers.size(); headerIndex++) {
             string line = headers[headerIndex];
-            vector<string> R = utils::split(line, ": ");
+            vector<string> R = strutils::split(line, ": ");
             if (R.size() != 2)
                 throw Server::Exception("Invalid header");
             req->setHeader(R[0], R[1], false);
-            if (utils::tolower(R[0]) == utils::tolower("Content-Length"))
+            if (strutils::tolower(R[0]) == strutils::tolower("Content-Length"))
                 if (realBodySize != (size_t)atol(R[1].c_str()))
                     return nullptr;
         }
 
         string contentType = req->getHeader("Content-Type");
         if (realBodySize != 0 && !contentType.empty()) {
-            if (utils::startsWith(contentType, "application/x-www-form-urlencoded")) {
-                vector<string> urlencodedParts = utils::split(reqBody, "\r\n");
+            if (strutils::startsWith(contentType, "application/x-www-form-urlencoded")) {
+                vector<string> urlencodedParts = strutils::split(reqBody, "\r\n");
                 for (const string& part : urlencodedParts) {
-                    vector<string> body = utils::split(part, '&');
+                    vector<string> body = strutils::split(part, '&');
                     for (size_t i = 0; i < body.size(); i++) {
-                        vector<string> field = utils::split(body[i], '=');
+                        vector<string> field = strutils::split(body[i], '=');
                         if (field.size() == 2)
                             req->setBodyParam(field[0], field[1], "application/x-www-form-urlencoded", false);
                         else if (field.size() == 1)
@@ -149,7 +149,7 @@ Request* parseRawReq(char* reqData, size_t length) {
                     }
                 }
             }
-            else if (utils::startsWith(contentType, "multipart/form-data")) {
+            else if (strutils::startsWith(contentType, "multipart/form-data")) {
                 boundary = contentType.substr(contentType.find("boundary=") + 9);
                 size_t firstBoundary = reqBody.find("--" + boundary);
                 if (firstBoundary == string::npos) {
@@ -157,7 +157,7 @@ Request* parseRawReq(char* reqData, size_t length) {
                 }
                 reqBody.erase(reqBody.begin(), reqBody.begin() + firstBoundary + 2 + boundary.size());
 
-                vector<string> boundaries = utils::split(reqBody, "--" + boundary);
+                vector<string> boundaries = strutils::split(reqBody, "--" + boundary);
                 boundaries.pop_back();
 
                 for (string b : boundaries) {
@@ -167,19 +167,19 @@ Request* parseRawReq(char* reqData, size_t length) {
                     string boundaryContentType = "text/plain";
 
                     size_t endOfBoundaryHeader = b.find("\r\n\r\n") + 4;
-                    vector<string> abc = utils::split(b.substr(0, endOfBoundaryHeader - 4), "\r\n");
+                    vector<string> abc = strutils::split(b.substr(0, endOfBoundaryHeader - 4), "\r\n");
                     for (const string& line : abc) {
                         if (line.empty()) {
                             break;
                         }
-                        vector<string> R = utils::split(line, ": ");
+                        vector<string> R = strutils::split(line, ": ");
                         if (R.size() != 2) throw Server::Exception("Invalid header");
-                        if (utils::tolower(R[0]) == utils::tolower("Content-Disposition")) {
-                            vector<string> A = utils::split(R[1], "; ");
+                        if (strutils::tolower(R[0]) == strutils::tolower("Content-Disposition")) {
+                            vector<string> A = strutils::split(R[1], "; ");
                             for (size_t i = 0; i < A.size(); i++) {
-                                vector<string> attr = utils::split(A[i], '=');
+                                vector<string> attr = strutils::split(A[i], '=');
                                 if (attr.size() == 2) {
-                                    if (utils::tolower(attr[0]) == utils::tolower("name")) {
+                                    if (strutils::tolower(attr[0]) == strutils::tolower("name")) {
                                         lastFieldKey = attr[1].substr(1, attr[1].size() - 2);
                                     }
                                 }
@@ -188,8 +188,8 @@ Request* parseRawReq(char* reqData, size_t length) {
                                 }
                             }
                         }
-                        else if (utils::tolower(R[0]) == utils::tolower("Content-Type")) {
-                            boundaryContentType = utils::tolower(R[1]);
+                        else if (strutils::tolower(R[0]) == strutils::tolower("Content-Type")) {
+                            boundaryContentType = strutils::tolower(R[1]);
                         }
                     }
                     lastFieldValue = b.substr(endOfBoundaryHeader);

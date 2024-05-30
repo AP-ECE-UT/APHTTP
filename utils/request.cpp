@@ -80,10 +80,10 @@ std::string Request::getSessionId() const {
         return {};
     }
     trim(cookie);
-    std::vector<std::string> v = utils::split(cookie, ";");
+    std::vector<std::string> v = strutils::split(cookie, ";");
     for (std::string kv : v) {
         trim(kv);
-        std::vector<std::string> k = utils::split(kv, "=");
+        std::vector<std::string> k = strutils::split(kv, "=");
         if (k[0] == "sessionId") {
             return k[1];
         }
