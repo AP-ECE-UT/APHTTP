@@ -58,24 +58,25 @@ static const char* getSocketError() {
 using namespace std;
 
 class NotFoundHandler : public RequestHandler {
-    string notFoundErrPage;
-
 public:
-    NotFoundHandler(string notFoundErrPage = "")
-        : notFoundErrPage(notFoundErrPage) {}
+    NotFoundHandler(const string& notFoundErrPage = "")
+        : notFoundErrPage_(notFoundErrPage) {}
     Response* callback(Request* req) {
         Response* res = new Response(Response::Status::notFound);
-        if (!notFoundErrPage.empty()) {
-            res->setHeader("Content-Type", "text/" + utils::getExtension(notFoundErrPage));
-            res->setBody(utils::readFile(notFoundErrPage));
+        if (!notFoundErrPage_.empty()) {
+            res->setHeader("Content-Type", "text/" + utils::getExtension(notFoundErrPage_));
+            res->setBody(utils::readFile(notFoundErrPage_));
         }
         return res;
     }
+
+private:
+    string notFoundErrPage_;
 };
 
 class ServerErrorHandler {
 public:
-    static Response* callback(string msg) {
+    static Response* callback(const string& msg) {
         Response* res = new Response(Response::Status::internalServerError);
         res->setHeader("Content-Type", "application/json");
         res->setBody("{ \"code\": \"500\", \"message\": \"" + msg + "\" }\n");
@@ -210,7 +211,7 @@ Request* parseRawReq(char* reqData, size_t length) {
     return req;
 }
 
-Server::Server(int _port) : port(_port) {
+Server::Server(int port) : port_(port) {
 #ifdef _WIN32
     WSADATA wsa_data;
     int initializeResult = WSAStartup(MAKEWORD(2, 2), &wsa_data);
@@ -220,26 +221,26 @@ Server::Server(int _port) : port(_port) {
     }
 #endif
 
-    notFoundHandler = new NotFoundHandler();
+    notFoundHandler_ = new NotFoundHandler();
 
-    sc = socket(AF_INET, SOCK_STREAM, 0);
+    sc_ = socket(AF_INET, SOCK_STREAM, 0);
     int sc_option = 1;
 
 #ifdef _WIN32
-    setsockopt(sc, SOL_SOCKET, SO_REUSEADDR, (char*)&sc_option,
-               sizeof(sc_option));
+    setsockopt(sc_, SOL_SOCKET, SO_REUSEADDR, (char*)&sc_option, sizeof(sc_option));
 #else
-    setsockopt(sc, SOL_SOCKET, SO_REUSEADDR, &sc_option, sizeof(sc_option));
+    setsockopt(sc_, SOL_SOCKET, SO_REUSEADDR, &sc_option, sizeof(sc_option));
 #endif
-    if (!ISVALIDSOCKET(sc))
+    if (!ISVALIDSOCKET(sc_)) {
         throw Exception("Error on opening socket: " + string(getSocketError()));
+    }
 
     struct sockaddr_in serv_addr;
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(port);
+    serv_addr.sin_port = htons(port_);
 
-    if (::bind(sc, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) != 0) {
+    if (::bind(sc_, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) != 0) {
         throw Exception("Error on binding: " + string(getSocketError()));
     }
 }
@@ -247,7 +248,7 @@ Server::Server(int _port) : port(_port) {
 void Server::mapRequest(const string& path, RequestHandler* handler, Request::Method method) {
     Route* route = new Route(method, path);
     route->setHandler(handler);
-    routes.push_back(route);
+    routes_.push_back(route);
 }
 
 void Server::get(const std::string& path, RequestHandler* handler) {
@@ -267,7 +268,7 @@ void Server::del(const std::string& path, RequestHandler* handler) {
 }
 
 void Server::run() {
-    ::listen(sc, 10);
+    ::listen(sc_, 10);
 
     struct sockaddr_in cli_addr;
     socklen_t clilen;
@@ -275,7 +276,7 @@ void Server::run() {
     SOCKET newsc;
 
     while (true) {
-        newsc = ::accept(sc, (struct sockaddr*)&cli_addr, &clilen);
+        newsc = ::accept(sc_, (struct sockaddr*)&cli_addr, &clilen);
         if (!ISVALIDSOCKET(newsc))
             throw Exception("Error on accept: " + string(getSocketError()));
         Response* res = nullptr;
@@ -300,14 +301,14 @@ void Server::run() {
             }
             req->log();
             size_t i = 0;
-            for (; i < routes.size(); i++) {
-                if (routes[i]->isMatch(req->getMethod(), req->getPath())) {
-                    res = routes[i]->handle(req);
+            for (; i < routes_.size(); i++) {
+                if (routes_[i]->isMatch(req->getMethod(), req->getPath())) {
+                    res = routes_[i]->handle(req);
                     break;
                 }
             }
-            if (i == routes.size() && notFoundHandler) {
-                res = notFoundHandler->callback(req);
+            if (i == routes_.size() && notFoundHandler_) {
+                res = notFoundHandler_->callback(req);
             }
             delete req;
         }
@@ -316,7 +317,7 @@ void Server::run() {
             res = ServerErrorHandler::callback(exc.getMessage());
         }
         res->log();
-        string res_data = res->print();
+        string res_data = res->getResponse();
         int si = res_data.size();
         delete res;
         int wr = send(newsc, res_data.c_str(), si, 0);
@@ -327,20 +328,21 @@ void Server::run() {
 }
 
 Server::~Server() {
-    if (sc >= 0)
-        CLOSESOCKET(sc);
-    delete notFoundHandler;
-    for (size_t i = 0; i < routes.size(); ++i)
-        delete routes[i];
-
+    if (sc_ >= 0) {
+        CLOSESOCKET(sc_);
+    }
+    delete notFoundHandler_;
+    for (size_t i = 0; i < routes_.size(); ++i) {
+        delete routes_[i];
+    }
 #ifdef _WIN32
     WSACleanup();
 #endif
 }
 
-Server::Exception::Exception(const string msg) { message = msg; }
+Server::Exception::Exception(const string message) : message_(message) {}
 
-string Server::Exception::getMessage() const { return message; }
+string Server::Exception::getMessage() const { return message_; }
 
 ShowFile::ShowFile(const string& filePath, const string& fileType)
     : filePath_(filePath),
@@ -360,8 +362,8 @@ ShowImage::ShowImage(const string& filePath)
     : ShowFile(filePath, "image/" + utils::getExtension(filePath)) {}
 
 void Server::setNotFoundErrPage(const std::string& notFoundErrPage) {
-    delete notFoundHandler;
-    notFoundHandler = new NotFoundHandler(notFoundErrPage);
+    delete notFoundHandler_;
+    notFoundHandler_ = new NotFoundHandler(notFoundErrPage);
 }
 
 RequestHandler::~RequestHandler() {}

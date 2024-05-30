@@ -33,17 +33,17 @@ public:
     std::string getBodyParam(const std::string& key) const;
     std::string getSessionId() const;
 
-    void log();
+    void log() const;
 
 private:
-    Method method;
-    std::string path;
-    utils::CiMap headers;
-    utils::CiMap query;
-    utils::CiMap body;
-    utils::CiMap bodyTypes;
+    Method method_;
+    std::string path_;
+    utils::CiMap headers_;
+    utils::CiMap query_;
+    utils::CiMap body_;
+    utils::CiMap bodyTypes_;
 
-    static const std::unordered_map<std::string, Method> methodMap;
+    static const std::unordered_map<std::string, Method> methodMap_;
 };
 
 #endif // REQUEST_HPP_INCLUDE

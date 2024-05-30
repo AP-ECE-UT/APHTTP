@@ -74,18 +74,18 @@ public:
     class Exception : public std::exception {
     public:
         Exception() {}
-        Exception(const std::string);
+        Exception(const std::string message);
         std::string getMessage() const;
 
     private:
-        std::string message;
+        std::string message_;
     };
 
 private:
-    SOCKET sc;
-    int port;
-    std::vector<Route*> routes;
-    RequestHandler* notFoundHandler;
+    SOCKET sc_;
+    int port_;
+    std::vector<Route*> routes_;
+    RequestHandler* notFoundHandler_;
 
     void mapRequest(const std::string& path, RequestHandler* handler, Request::Method method);
 };

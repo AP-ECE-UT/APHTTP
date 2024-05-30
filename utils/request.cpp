@@ -7,60 +7,60 @@
 
 #include "strutils.hpp"
 
-const std::unordered_map<std::string, Request::Method> Request::methodMap = {
+const std::unordered_map<std::string, Request::Method> Request::methodMap_ = {
     {"GET", Request::Method::GET},
     {"POST", Request::Method::POST},
     {"PUT", Request::Method::PUT},
     {"DEL", Request::Method::DEL},
 };
 
-Request::Request(Method method_)
-    : method(method_) {}
+Request::Request(Method method)
+    : method_(method) {}
 
-Request::Request(const std::string& method_)
+Request::Request(const std::string& method)
     : Request(Method::GET) {
-    auto itr = methodMap.find(method_);
-    if (itr != methodMap.end()) {
-        method = itr->second;
+    auto itr = methodMap_.find(method);
+    if (itr != methodMap_.end()) {
+        method_ = itr->second;
     }
 }
 
 Request::Method Request::getMethod() const {
-    return method;
+    return method_;
 }
 
 std::string Request::getPath() const {
-    return path;
+    return path_;
 }
 
 std::string Request::getHeader(const std::string& key) const {
-    auto itr = headers.find(key);
-    if (itr == headers.end()) {
+    auto itr = headers_.find(key);
+    if (itr == headers_.end()) {
         return {};
     }
     return utils::urlDecode(itr->second);
 }
 
 std::string Request::getBody() const {
-    std::string bs;
-    for (auto itr = body.begin(); !body.empty() && itr != body.end(); ++itr) {
-        bs += itr->first + "=" + itr->second + "&";
+    std::string result;
+    for (auto itr = body_.begin(); itr != body_.end(); ++itr) {
+        result += itr->first + "=" + itr->second + "&";
     }
-    return bs;
+    return result;
 }
 
 std::string Request::getQueryParam(const std::string& key) const {
-    auto itr = query.find(key);
-    if (itr == query.end()) {
+    auto itr = query_.find(key);
+    if (itr == query_.end()) {
         return {};
     }
     return utils::urlDecode(itr->second);
 }
 
 std::string Request::getBodyParam(const std::string& key) const {
-    auto bodyType = bodyTypes.find(key);
-    auto itr = body.find(key);
-    if (bodyType == bodyTypes.end() || itr == body.end()) {
+    auto bodyType = bodyTypes_.find(key);
+    auto itr = body_.find(key);
+    if (bodyType == bodyTypes_.end() || itr == body_.end()) {
         return {};
     }
 
@@ -91,51 +91,51 @@ std::string Request::getSessionId() const {
     return {};
 }
 
-void Request::setPath(const std::string& _path) {
-    path = _path;
+void Request::setPath(const std::string& path) {
+    path_ = path;
 }
 
 void Request::setHeader(const std::string& key, const std::string& value, bool encode) {
-    headers[key] = encode ? utils::urlEncode(value) : value;
+    headers_[key] = encode ? utils::urlEncode(value) : value;
 }
 
-void Request::setBody(const std::string& _body) {
-    body = utils::getCimapFromString(_body);
+void Request::setBody(const std::string& body) {
+    body_ = utils::getCimapFromString(body);
 }
 
 void Request::setQueryParam(const std::string& key, const std::string& value, bool encode) {
-    query[key] = encode ? utils::urlEncode(value) : value;
+    query_[key] = encode ? utils::urlEncode(value) : value;
 }
 
 void Request::setBodyParam(const std::string& key, const std::string& value, const std::string& contentType, bool encode) {
-    body[key] = encode ? utils::urlEncode(value) : value;
-    bodyTypes[key] = contentType;
+    body_[key] = encode ? utils::urlEncode(value) : value;
+    bodyTypes_[key] = contentType;
 }
 
-void Request::log() {
+void Request::log() const {
     const std::string NC = "\033[0;39m";
     const std::string K = "\033[1m";
     const std::string H = "\033[33;1m";
 
     std::string log;
     log += H + "------- Request --------" + NC + "\n";
-    log += K + "Method: " + NC + (method == Method::POST ? "POST" : "GET") + "\n";
-    log += K + "Path:   " + NC + path + "\n";
+    log += K + "Method: " + NC + (method_ == Method::POST ? "POST" : "GET") + "\n";
+    log += K + "Path:   " + NC + path_ + "\n";
     log += K + "SessionId: " + NC + this->getSessionId() + "\n";
 
     log += K + "Headers:" + NC + "\n";
-    for (auto itr = headers.begin(); itr != headers.end(); itr++) {
+    for (auto itr = headers_.begin(); itr != headers_.end(); itr++) {
         log += "  " + utils::urlDecode(itr->first) + ": " + utils::urlDecode(itr->second) + "\n";
     }
 
     log += K + "Query:" + NC + "\n";
-    for (auto itr = query.begin(); itr != query.end(); itr++) {
+    for (auto itr = query_.begin(); itr != query_.end(); itr++) {
         log += "  " + utils::urlDecode(itr->first) + ": " + utils::urlDecode(itr->second) + "\n";
     }
 
     log += K + "Body:" + NC + "\n";
-    for (auto itr = body.begin(); itr != body.end(); itr++) {
-        std::string type = bodyTypes[itr->first];
+    for (auto itr = body_.begin(); itr != body_.end(); itr++) {
+        std::string type = bodyTypes_.find(itr->first)->second;
         if (type == "application/x-www-form-urlencoded" || type == "text/plain") {
             log += "  " + utils::urlDecode(itr->first) + ": " + utils::urlDecode(itr->second) + "\n";
         }

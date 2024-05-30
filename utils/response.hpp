@@ -34,18 +34,20 @@ public:
     void setBody(const std::string& _body);
     void setSessionId(const std::string& sessionId);
 
-    std::string print();
-    void log(bool showBody = false);
+    std::string getHeader() const;
+    std::string getResponse() const;
+
+    void log(bool showBody = false) const;
 
     static Response* redirect(const std::string& url);
 
 private:
-    int code;
-    std::string phrase;
-    std::string body;
-    utils::CiMap headers;
+    int code_;
+    std::string phrase_;
+    std::string body_;
+    utils::CiMap headers_;
 
-    static const std::unordered_map<Status, std::string> httpPhraseMap;
+    static const std::unordered_map<Status, std::string> phraseMap_;
 };
 
 #endif // RESPONSE_HPP_INCLUDE
