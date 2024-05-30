@@ -64,7 +64,7 @@ public:
     NotFoundHandler(string notFoundErrPage = "")
         : notFoundErrPage(notFoundErrPage) {}
     Response* callback(Request* req) {
-        Response* res = new Response(404);
+        Response* res = new Response(Response::Status::notFound);
         if (!notFoundErrPage.empty()) {
             res->setHeader("Content-Type", "text/" + utils::getExtension(notFoundErrPage));
             res->setBody(utils::readFile(notFoundErrPage));
@@ -76,7 +76,7 @@ public:
 class ServerErrorHandler {
 public:
     static Response* callback(string msg) {
-        Response* res = new Response(500);
+        Response* res = new Response(Response::Status::internalServerError);
         res->setHeader("Content-Type", "application/json");
         res->setBody("{ \"code\": \"500\", \"message\": \"" + msg + "\" }\n");
         return res;
@@ -278,11 +278,11 @@ void Server::run() {
         newsc = ::accept(sc, (struct sockaddr*)&cli_addr, &clilen);
         if (!ISVALIDSOCKET(newsc))
             throw Exception("Error on accept: " + string(getSocketError()));
-        Response* res = NULL;
+        Response* res = nullptr;
         try {
             char* data = new char[BUFSIZE + 1];
             size_t recv_len, recv_total_len = 0;
-            Request* req = NULL;
+            Request* req = nullptr;
             while (!req) {
                 recv_len = recv(newsc, data + recv_total_len, BUFSIZE - recv_total_len, 0);
                 if (recv_len > 0) {
@@ -315,9 +315,9 @@ void Server::run() {
             delete res;
             res = ServerErrorHandler::callback(exc.getMessage());
         }
-        int si;
         res->log();
-        string res_data = res->print(si);
+        string res_data = res->print();
+        int si = res_data.size();
         delete res;
         int wr = send(newsc, res_data.c_str(), si, 0);
         if (wr != si)
@@ -348,7 +348,7 @@ ShowFile::ShowFile(string _filePath, string _fileType) {
 }
 
 Response* ShowFile::callback(Request* req) {
-    Response* res = new Response;
+    Response* res = new Response();
     res->setHeader("Content-Type", fileType);
     res->setBody(utils::readFile(filePath));
     return res;
@@ -375,7 +375,7 @@ TemplateHandler::TemplateHandler(string _filePath) {
 Response* TemplateHandler::callback(Request* req) {
     map<string, string> context;
     context = this->handle(req);
-    Response* res = new Response;
+    Response* res = new Response();
     res->setHeader("Content-Type", "text/html");
     res->setBody(parser->getHtml(context));
     return res;

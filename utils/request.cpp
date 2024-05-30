@@ -124,23 +124,23 @@ void Request::log() {
     log += K + "SessionId: " + NC + this->getSessionId() + "\n";
 
     log += K + "Headers:" + NC + "\n";
-    for (auto it = headers.begin(); !headers.empty() && it != headers.end(); it++) {
-        log += "  " + utils::urlDecode(it->first) + ": " + utils::urlDecode(it->second) + "\n";
+    for (auto itr = headers.begin(); itr != headers.end(); itr++) {
+        log += "  " + utils::urlDecode(itr->first) + ": " + utils::urlDecode(itr->second) + "\n";
     }
 
     log += K + "Query:" + NC + "\n";
-    for (auto it = query.begin(); !query.empty() && it != query.end(); it++) {
-        log += "  " + utils::urlDecode(it->first) + ": " + utils::urlDecode(it->second) + "\n";
+    for (auto itr = query.begin(); itr != query.end(); itr++) {
+        log += "  " + utils::urlDecode(itr->first) + ": " + utils::urlDecode(itr->second) + "\n";
     }
 
     log += K + "Body:" + NC + "\n";
-    for (auto it = body.begin(); !body.empty() && it != body.end(); it++) {
-        std::string type = bodyTypes[it->first];
+    for (auto itr = body.begin(); itr != body.end(); itr++) {
+        std::string type = bodyTypes[itr->first];
         if (type == "application/x-www-form-urlencoded" || type == "text/plain") {
-            log += "  " + utils::urlDecode(it->first) + ": " + utils::urlDecode(it->second) + "\n";
+            log += "  " + utils::urlDecode(itr->first) + ": " + utils::urlDecode(itr->second) + "\n";
         }
         else {
-            log += "  " + utils::urlDecode(it->first) + ": <BINARY DATA>\n";
+            log += "  " + utils::urlDecode(itr->first) + ": <BINARY DATA>\n";
         }
     }
     log += H + "------------------------" + NC + "\n";

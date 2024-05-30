@@ -3,6 +3,7 @@
 #include <fstream>
 #include <vector>
 
+#include "include.hpp"
 #include "strutils.hpp"
 
 namespace utils {

@@ -3,7 +3,7 @@
 using namespace std;
 
 Response* RandomNumberHandler::callback(Request* req) {
-    Response* res = new Response;
+    Response* res = new Response();
     res->setHeader("Content-Type", "text/html");
     string body;
     body += "<!DOCTYPE html>";
