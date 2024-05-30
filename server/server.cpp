@@ -342,22 +342,21 @@ Server::Exception::Exception(const string msg) { message = msg; }
 
 string Server::Exception::getMessage() const { return message; }
 
-ShowFile::ShowFile(string _filePath, string _fileType) {
-    filePath = _filePath;
-    fileType = _fileType;
-}
+ShowFile::ShowFile(const string& filePath, const string& fileType)
+    : filePath_(filePath),
+      fileType_(fileType) {}
 
 Response* ShowFile::callback(Request* req) {
     Response* res = new Response();
-    res->setHeader("Content-Type", fileType);
-    res->setBody(utils::readFile(filePath));
+    res->setHeader("Content-Type", fileType_);
+    res->setBody(utils::readFile(filePath_));
     return res;
 }
 
-ShowPage::ShowPage(string filePath)
+ShowPage::ShowPage(const string& filePath)
     : ShowFile(filePath, "text/" + utils::getExtension(filePath)) {}
 
-ShowImage::ShowImage(string filePath)
+ShowImage::ShowImage(const string& filePath)
     : ShowFile(filePath, "image/" + utils::getExtension(filePath)) {}
 
 void Server::setNotFoundErrPage(const std::string& notFoundErrPage) {
@@ -367,9 +366,12 @@ void Server::setNotFoundErrPage(const std::string& notFoundErrPage) {
 
 RequestHandler::~RequestHandler() {}
 
-TemplateHandler::TemplateHandler(string _filePath) {
-    filePath = _filePath;
-    parser = new TemplateParser(filePath);
+TemplateHandler::TemplateHandler(const string& filePath)
+    : filePath_(filePath),
+      parser_(new TemplateParser(filePath)) {}
+
+TemplateHandler::~TemplateHandler() {
+    delete parser_;
 }
 
 Response* TemplateHandler::callback(Request* req) {
@@ -377,7 +379,7 @@ Response* TemplateHandler::callback(Request* req) {
     context = this->handle(req);
     Response* res = new Response();
     res->setHeader("Content-Type", "text/html");
-    res->setBody(parser->getHtml(context));
+    res->setBody(parser_->getHtml(context));
     return res;
 }
 

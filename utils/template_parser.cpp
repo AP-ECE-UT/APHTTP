@@ -75,8 +75,7 @@ void TemplateParser::appendCodeBlockToCode(int begin, int end,
     if (end <= begin || begin < 0)
         throw Server::Exception("Can not parse template " + filePath);
     int codeBlockSize = end - begin - beginCodeBlockTag.size();
-    code +=
-        unparsedTemplate.substr(begin + beginCodeBlockTag.size(), codeBlockSize);
+    code += unparsedTemplate.substr(begin + beginCodeBlockTag.size(), codeBlockSize);
 }
 
 void TemplateParser::makeExecutableTemplate() {
@@ -147,8 +146,7 @@ void TemplateParser::addContextMapToCode() {
     string mapCode = "std::map<std::string, std::string> context;\n";
     // `mapFile` should be changed if we want to handle requests
     //  in a multi-thread non-blocking way
-    mapCode +=
-        "utils::readMapFromFile(\"" + outputFolder + "/" + mapFile + "\", context);\n";
+    mapCode += "utils::readMapFromFile(\"" + outputFolder + "/" + mapFile + "\", context);\n";
     code = mapCode + code;
 }
 
@@ -165,15 +163,13 @@ void TemplateParser::deleteExecutable() {
 }
 
 void TemplateParser::deleteLocalTemplate() {
-    string cmd =
-        SysCmd::rm + outputFolder + SysCmd::slash + localTemplate(parserNum);
+    string cmd = SysCmd::rm + outputFolder + SysCmd::slash + localTemplate(parserNum);
     string error = "Error in deleting local template at  " + outputFolder + "/" +
                    localTemplate(parserNum);
     TemplateUtils::runSystemCommand(cmd, error);
 }
 
-void TemplateParser::TemplateUtils::runSystemCommand(string command,
-                                                     string error) {
+void TemplateParser::TemplateUtils::runSystemCommand(string command, string error) {
     int ret = system(command.c_str());
 #ifdef _WIN32
     if (ret != 0) {

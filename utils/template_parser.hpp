@@ -41,7 +41,20 @@ const std::string mapFile = "map.txt";
 const std::string localTemplate(const int parserNum);
 
 class TemplateParser {
+public:
+    TemplateParser(std::string _filePath);
+    ~TemplateParser();
+
+    std::string getHtml(std::map<std::string, std::string> _context);
+
 private:
+    class TemplateUtils {
+    public:
+        static void runSystemCommand(std::string command, std::string errorMessage);
+        static int writeMapToFile(std::string fname,
+                                  std::map<std::string, std::string>* m);
+    };
+
     static int lastParserNum;
     int parserNum;
     std::string filePath;
@@ -67,17 +80,6 @@ private:
     void compileCode();
     void deleteExecutable();
     void deleteLocalTemplate();
-    class TemplateUtils {
-    public:
-        static void runSystemCommand(std::string command, std::string errorMessage);
-        static int writeMapToFile(std::string fname,
-                                  std::map<std::string, std::string>* m);
-    };
-
-public:
-    TemplateParser(std::string _filePath);
-    ~TemplateParser();
-    std::string getHtml(std::map<std::string, std::string> _context);
 };
 
 #endif // TEMPLATE_PARSER_HPP_INCLUDE
