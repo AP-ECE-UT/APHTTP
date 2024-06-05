@@ -73,7 +73,7 @@ public:
 
     class Exception : public std::exception {
     public:
-        Exception() {}
+        Exception() = default;
         Exception(const std::string message);
         std::string getMessage() const;
 

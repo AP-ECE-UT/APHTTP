@@ -39,8 +39,9 @@ void TemplateParser::parseTemplate() {
     while (parsePointer < (signed int)unparsedTemplate.size()) {
         int begin = findBeginOfCodeBlock(parsePointer, unparsedTemplate);
         int end = findEndOfCodeBlock(parsePointer, unparsedTemplate);
-        if (begin < 0)
+        if (begin < 0) {
             break;
+        }
         appendHTMLToCode(parsePointer, begin, unparsedTemplate);
         appendCodeBlockToCode(begin, end, unparsedTemplate);
         parsePointer = end + endCodeBlockTag.size();
@@ -72,8 +73,9 @@ void TemplateParser::appendHTMLToCode(int begin, int end,
 
 void TemplateParser::appendCodeBlockToCode(int begin, int end,
                                            string& unparsedTemplate) {
-    if (end <= begin || begin < 0)
+    if (end <= begin || begin < 0) {
         throw Server::Exception("Can not parse template " + filePath);
+    }
     int codeBlockSize = end - begin - beginCodeBlockTag.size();
     code += unparsedTemplate.substr(begin + beginCodeBlockTag.size(), codeBlockSize);
 }
@@ -86,9 +88,9 @@ void TemplateParser::makeExecutableTemplate() {
 
 void TemplateParser::makeLocalTemplate() {
     string templateContent = utils::readFile(filePath);
-    if (!utils::writeToFile(templateContent, outputFolder + "/" + localTemplate(parserNum)))
-        throw Server::Exception("Can not write template to local " + outputFolder +
-                                "folder");
+    if (!utils::writeToFile(templateContent, outputFolder + "/" + localTemplate(parserNum))) {
+        throw Server::Exception("Can not write template to local " + outputFolder + "folder");
+    }
 }
 
 void TemplateParser::generateCode() {
@@ -99,8 +101,9 @@ void TemplateParser::generateCode() {
 }
 
 void TemplateParser::compileCode() {
-    if (!utils::writeToFile(code, toCompileFile))
+    if (!utils::writeToFile(code, toCompileFile)) {
         throw Server::Exception("Can not write generated template code!");
+    }
 
     string cmd = mkdirNoErrors(outputFolder) + " && " + cc + " " + toCompileFile +
                  " " + utilitiesPath + " " + strutilsPath + " -o " + outputFolder + SysCmd::slash +
@@ -157,15 +160,13 @@ TemplateParser::~TemplateParser() {
 
 void TemplateParser::deleteExecutable() {
     string cmd = SysCmd::rm + outputFolder + SysCmd::slash + programName;
-    string error = "Error in deleting executable file at  " + outputFolder + "/" +
-                   programName;
+    string error = "Error in deleting executable file at  " + outputFolder + "/" + programName;
     TemplateUtils::runSystemCommand(cmd, error);
 }
 
 void TemplateParser::deleteLocalTemplate() {
     string cmd = SysCmd::rm + outputFolder + SysCmd::slash + localTemplate(parserNum);
-    string error = "Error in deleting local template at  " + outputFolder + "/" +
-                   localTemplate(parserNum);
+    string error = "Error in deleting local template at  " + outputFolder + "/" + localTemplate(parserNum);
     TemplateUtils::runSystemCommand(cmd, error);
 }
 
@@ -184,12 +185,10 @@ void TemplateParser::TemplateUtils::runSystemCommand(string command, string erro
 
 int TemplateParser::TemplateUtils::writeMapToFile(std::string fname, std::map<std::string, std::string>* m) {
     int count = 0;
-    if (m->empty())
-        return 0;
+    if (m->empty()) return 0;
 
     FILE* fp = fopen(fname.c_str(), "w");
-    if (!fp)
-        return -errno;
+    if (!fp) return -errno;
 
     for (std::map<std::string, std::string>::iterator it = m->begin();
          it != m->end(); it++) {

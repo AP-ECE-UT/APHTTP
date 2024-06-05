@@ -6,20 +6,23 @@
 Response* RandomNumberHandler::callback(Request* req) {
     Response* res = new Response();
     res->setHeader("Content-Type", "text/html");
+
+    std::string randomNumber = std::to_string(std::rand() % 10 + 1);
     std::string body;
+
     body += "<!DOCTYPE html>";
-    body += "<html>";
+    body += "<html lang=\"en\">";
+
+    body += "<head>";
+    body += "  <title>Random Number Page</title>";
+    body += "</head>";
+
     body += "<body style=\"text-align: center;\">";
-    body += "<h1>AP HTTP</h1>";
-    body += "<p>";
-    body += "a random number in [1, 10] is: ";
-    body += std::to_string(std::rand() % 10 + 1);
-    body += "</p>";
-    body += "<p>";
-    body += "SessionId: ";
-    body += req->getSessionId();
-    body += "</p>";
+    body += "  <h1>AP HTTP</h1>";
+    body += "  <p>A random number in [1, 10] is: " + randomNumber + "</p>";
+    body += "  <p>SessionId: " + req->getSessionId() + "</p>";
     body += "</body>";
+
     body += "</html>";
     res->setBody(body);
     return res;
@@ -45,7 +48,8 @@ Response* UploadHandler::callback(Request* req) {
     return res;
 }
 
-ColorHandler::ColorHandler(const std::string& filePath) : TemplateHandler(filePath) {}
+ColorHandler::ColorHandler(const std::string& filePath)
+    : TemplateHandler(filePath) {}
 
 std::map<std::string, std::string> ColorHandler::handle(Request* req) {
     std::string newName = "I am " + req->getQueryParam("name");
