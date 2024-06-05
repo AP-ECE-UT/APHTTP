@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace utils {
+namespace strutils {
 
 void trimLeft(std::string& str);
 void trimRight(std::string& str);
@@ -19,6 +19,6 @@ std::string tolower(const std::string& str);
 void replaceAll(std::string& str, const std::string& from, const std::string& to);
 bool startsWith(const std::string& str, const std::string& s);
 
-} // namespace utils
+} // namespace strutils
 
 #endif // STRUTILS_HPP_INCLUDE

@@ -2,43 +2,48 @@
 #define REQUEST_HPP_INCLUDE
 
 #include <string>
+#include <unordered_map>
 
-#include "../utils/include.hpp"
-#include "../utils/utilities.hpp"
+#include "utilities.hpp"
 
 class Request {
 public:
-    Request(std::string method = "GET");
-    std::string getPath();
-    void setPath(std::string);
-    Method getMethod();
-    void setMethod(Method);
-    std::string getQueryParam(std::string key);
-    void setQueryParam(std::string key, std::string value, bool encode = true);
-    std::string getBodyParam(std::string key);
-    void setBodyParam(std::string key, std::string value, std::string contentType = "text/plain", bool encode = true);
-    std::string getHeader(std::string key);
-    void setHeader(std::string key, std::string value, bool encode = true);
-    std::string getBody();
-    std::string getSessionId();
-    void setSessionId(std::string);
-    std::string getQueryString();
-    utils::CiMap getHeaders();
-    std::string getHeadersString();
-    void setHeaders(std::string headers);
-    void setQuery(std::string query);
-    void setBody(std::string body);
-    void log();
-    static void serializeToFile(Request* req, std::string filePath);
-    static void deserializeFromFile(Request* req, std::string filePath);
+    enum class Method {
+        GET,
+        POST,
+        PUT,
+        DEL,
+    };
+
+    Request(Method method);
+    Request(const std::string& method);
+
+    void setPath(const std::string& path);
+    void setHeader(const std::string& key, const std::string& value, bool encode = true);
+    void setBody(const std::string& body);
+    void setQueryParam(const std::string& key, const std::string& value, bool encode = true);
+    void setBodyParam(const std::string& key, const std::string& value,
+                      const std::string& contentType = "text/plain", bool encode = true);
+
+    Method getMethod() const;
+    std::string getPath() const;
+    std::string getHeader(const std::string& key) const;
+    std::string getBody() const;
+    std::string getQueryParam(const std::string& key) const;
+    std::string getBodyParam(const std::string& key) const;
+    std::string getSessionId() const;
+
+    void log() const;
 
 private:
-    std::string path;
-    Method method;
-    utils::CiMap headers;
-    utils::CiMap query;
-    utils::CiMap body;
-    utils::CiMap bodyTypes;
+    Method method_;
+    std::string path_;
+    utils::CiMap headers_;
+    utils::CiMap query_;
+    utils::CiMap body_;
+    utils::CiMap bodyTypes_;
+
+    static const std::unordered_map<std::string, Method> methodMap_;
 };
 
 #endif // REQUEST_HPP_INCLUDE

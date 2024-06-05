@@ -1,183 +1,148 @@
 #include "request.hpp"
 
 #include <algorithm>
-#include <fstream>
 #include <iostream>
-#include <map>
+#include <unordered_map>
 #include <vector>
 
-#include "../utils/strutils.hpp"
-#include "../utils/utilities.hpp"
+#include "strutils.hpp"
 
-using namespace std;
+const std::unordered_map<std::string, Request::Method> Request::methodMap_ = {
+    {"GET", Request::Method::GET},
+    {"POST", Request::Method::POST},
+    {"PUT", Request::Method::PUT},
+    {"DEL", Request::Method::DEL},
+};
 
-Request::Request(string method_) {
-    if (method_ == "GET")
-        method = GET;
-    if (method_ == "POST")
-        method = POST;
-}
+Request::Request(Method method)
+    : method_(method) {}
 
-string Request::getQueryParam(string key) { return utils::urlDecode(query[key]); }
-
-string Request::getBodyParam(string key) {
-    if (bodyTypes[key] == "application/x-www-form-urlencoded") {
-        return utils::urlDecode(body[key]);
+Request::Request(const std::string& method)
+    : Request(Method::GET) {
+    auto itr = methodMap_.find(method);
+    if (itr != methodMap_.end()) {
+        method_ = itr->second;
     }
-    else return body[key];
 }
 
-string Request::getHeader(string key) { return utils::urlDecode(headers[key]); }
-
-string Request::getPath() { return path; }
-
-void Request::setPath(string _path) { path = _path; }
-
-Method Request::getMethod() { return method; }
-
-void Request::setMethod(Method _method) { method = _method; }
-
-void Request::setQueryParam(string key, string value, bool encode) {
-    query[key] = encode ? utils::urlEncode(value) : value;
+Request::Method Request::getMethod() const {
+    return method_;
 }
 
-void Request::setBodyParam(string key, string value, string contentType, bool encode) {
-    body[key] = encode ? utils::urlEncode(value) : value;
-    bodyTypes[key] = contentType;
+std::string Request::getPath() const {
+    return path_;
 }
 
-void Request::setHeader(string key, string value, bool encode) {
-    headers[key] = encode ? utils::urlEncode(value) : value;
+std::string Request::getHeader(const std::string& key) const {
+    auto itr = headers_.find(key);
+    if (itr == headers_.end()) {
+        return {};
+    }
+    return utils::urlDecode(itr->second);
 }
 
-string Request::getBody() {
-    string bs = "";
-    for (auto it = body.begin(); !body.empty() && it != body.end(); it++)
-        bs += it->first + "=" + it->second + "&";
-    return bs;
+std::string Request::getBody() const {
+    std::string result;
+    for (auto itr = body_.begin(); itr != body_.end(); ++itr) {
+        result += itr->first + "=" + itr->second + "&";
+    }
+    return result;
 }
 
-static void trim(string& s) {
+std::string Request::getQueryParam(const std::string& key) const {
+    auto itr = query_.find(key);
+    if (itr == query_.end()) {
+        return {};
+    }
+    return utils::urlDecode(itr->second);
+}
+
+std::string Request::getBodyParam(const std::string& key) const {
+    auto bodyType = bodyTypes_.find(key);
+    auto itr = body_.find(key);
+    if (bodyType == bodyTypes_.end() || itr == body_.end()) {
+        return {};
+    }
+
+    if (bodyType->second == "application/x-www-form-urlencoded") {
+        return utils::urlDecode(itr->second);
+    }
+    return itr->second;
+}
+
+static void trim(std::string& s) {
     s.erase(std::remove(s.begin(), s.end(), ' '), s.end());
 }
 
-string Request::getSessionId() {
-    string cookie = getHeader("cookie");
-    if (cookie == "")
-        return "";
-    trim(cookie);
-    vector<string> v = utils::split(cookie, ";");
-    for (string kv : v) {
-        trim(kv);
-        vector<string> k = utils::split(kv, "=");
-        if (k[0] == "sessionId")
-            return k[1];
+std::string Request::getSessionId() const {
+    std::string cookie = getHeader("cookie");
+    if (cookie.empty()) {
+        return {};
     }
-    return "";
+    trim(cookie);
+    std::vector<std::string> v = strutils::split(cookie, ";");
+    for (std::string kv : v) {
+        trim(kv);
+        std::vector<std::string> k = strutils::split(kv, "=");
+        if (k[0] == "sessionId") {
+            return k[1];
+        }
+    }
+    return {};
 }
 
-void Request::log() {
-    const string NC = "\033[0;39m";
-    const string K = "\033[1m";
-    const string H = "\033[33;1m";
+void Request::setPath(const std::string& path) {
+    path_ = path;
+}
 
-    string log;
+void Request::setHeader(const std::string& key, const std::string& value, bool encode) {
+    headers_[key] = encode ? utils::urlEncode(value) : value;
+}
+
+void Request::setBody(const std::string& body) {
+    body_ = utils::getCimapFromString(body);
+}
+
+void Request::setQueryParam(const std::string& key, const std::string& value, bool encode) {
+    query_[key] = encode ? utils::urlEncode(value) : value;
+}
+
+void Request::setBodyParam(const std::string& key, const std::string& value, const std::string& contentType, bool encode) {
+    body_[key] = encode ? utils::urlEncode(value) : value;
+    bodyTypes_[key] = contentType;
+}
+
+void Request::log() const {
+    const std::string NC = "\033[0;39m";
+    const std::string K = "\033[1m";
+    const std::string H = "\033[33;1m";
+
+    std::string log;
     log += H + "------- Request --------" + NC + "\n";
-    log += K + "Method: " + NC + (method == Method::POST ? "POST" : "GET") + "\n";
-    log += K + "Path:   " + NC + path + "\n";
+    log += K + "Method: " + NC + (method_ == Method::POST ? "POST" : "GET") + "\n";
+    log += K + "Path:   " + NC + path_ + "\n";
     log += K + "SessionId: " + NC + this->getSessionId() + "\n";
 
     log += K + "Headers:" + NC + "\n";
-    for (auto it = headers.begin(); !headers.empty() && it != headers.end(); it++) {
-        log += "  " + utils::urlDecode(it->first) + ": " + utils::urlDecode(it->second) + "\n";
+    for (auto itr = headers_.begin(); itr != headers_.end(); itr++) {
+        log += "  " + utils::urlDecode(itr->first) + ": " + utils::urlDecode(itr->second) + "\n";
     }
 
     log += K + "Query:" + NC + "\n";
-    for (auto it = query.begin(); !query.empty() && it != query.end(); it++) {
-        log += "  " + utils::urlDecode(it->first) + ": " + utils::urlDecode(it->second) + "\n";
+    for (auto itr = query_.begin(); itr != query_.end(); itr++) {
+        log += "  " + utils::urlDecode(itr->first) + ": " + utils::urlDecode(itr->second) + "\n";
     }
 
     log += K + "Body:" + NC + "\n";
-    for (auto it = body.begin(); !body.empty() && it != body.end(); it++) {
-        string type = bodyTypes[it->first];
+    for (auto itr = body_.begin(); itr != body_.end(); itr++) {
+        std::string type = bodyTypes_.find(itr->first)->second;
         if (type == "application/x-www-form-urlencoded" || type == "text/plain") {
-            log += "  " + utils::urlDecode(it->first) + ": " + utils::urlDecode(it->second) + "\n";
+            log += "  " + utils::urlDecode(itr->first) + ": " + utils::urlDecode(itr->second) + "\n";
         }
         else {
-            log += "  " + utils::urlDecode(it->first) + ": <BINARY DATA>\n";
+            log += "  " + utils::urlDecode(itr->first) + ": <BINARY DATA>\n";
         }
     }
     log += H + "------------------------" + NC + "\n";
-    clog << log << endl;
-}
-
-utils::CiMap Request::getHeaders() {
-    vector<string> res;
-    for (map<string, string>::iterator i = headers.begin();
-         !headers.empty() && i != headers.end(); i++) {
-        res.push_back(i->first);
-        res.push_back(i->second);
-    }
-    return headers;
-}
-
-string Request::getQueryString() {
-    if (query.empty())
-        return "";
-    string res = "?";
-    for (map<string, string>::iterator i = query.begin();
-         !query.empty() && i != query.end(); i++) {
-        res += i->first;
-        res += "=";
-        res += i->second;
-        res += "&";
-    }
-    return res;
-}
-
-string Request::getHeadersString() {
-    string headerString = "";
-    for (auto it = headers.begin(); !headers.empty() && it != headers.end(); it++)
-        headerString += it->first + "=" + it->second + "&";
-    return headerString;
-}
-
-void Request::setHeaders(string _headers) {
-    headers = utils::getCimapFromString(_headers);
-}
-
-void Request::setQuery(std::string _query) {
-    _query = _query.substr(1);
-    query = utils::getCimapFromString(_query);
-}
-
-void Request::setBody(std::string _body) { body = utils::getCimapFromString(_body); }
-
-void Request::serializeToFile(Request* req, string filePath) {
-    string reqString = to_string(req->getMethod());
-    reqString += "\n";
-    reqString += req->getPath();
-    reqString += "\n";
-    reqString += req->getHeadersString();
-    reqString += "\n";
-    reqString += req->getBody();
-    reqString += "\n";
-    reqString += req->getQueryString();
-    utils::writeToFile(reqString, filePath);
-}
-
-void Request::deserializeFromFile(Request* req, string filePath) {
-    vector<string> fields = utils::split(utils::readFile(filePath), '\n');
-    switch (fields.size()) {
-    case 5:
-        req->setQuery(fields[4]);
-    case 4:
-        req->setBody(fields[3]);
-    case 3:
-        req->setHeaders(fields[2]);
-    case 2:
-        req->setPath(fields[1]);
-    case 1:
-        req->setMethod(stoi(fields[0]) == GET ? GET : POST);
-    }
+    std::clog << log << std::endl;
 }

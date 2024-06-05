@@ -4,7 +4,7 @@
 #include <cctype>
 #include <sstream>
 
-namespace utils {
+namespace strutils {
 
 void trimLeft(std::string& str) {
     str.erase(str.begin(), std::find_if(str.begin(), str.end(), [](unsigned char ch) {
@@ -78,4 +78,4 @@ bool startsWith(const std::string& str, const std::string& s) {
            std::equal(s.begin(), s.end(), str.begin());
 }
 
-} // namespace utils
+} // namespace strutils

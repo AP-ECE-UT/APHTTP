@@ -2,33 +2,52 @@
 #define RESPONSE_HPP_INCLUDE
 
 #include <string>
+#include <unordered_map>
 
-#include "../utils/include.hpp"
 #include "../utils/utilities.hpp"
-
-const std::string SERVER_NAME = "AP HTTP Server";
 
 class Response {
 public:
-    Response(int code = 200);
-    std::string print(int&);
-    void log(bool showBody = false);
-    void setHeader(std::string name, std::string value);
-    void setBody(std::string _body);
-    void setStatus(int code, std::string phrase);
-    void setStatus(int code);
-    int getStatusCode();
-    std::string getStatusPhrase();
-    std::string getHeader(std::string name);
-    void setSessionId(std::string sessionId);
-    static Response* redirect(std::string url);
+    enum class Status {
+        ok = 200,
+        created = 201,
+
+        movedPermanently = 301,
+        seeOther = 303,
+
+        badRequest = 400,
+        unauthorized = 401,
+        forbidden = 403,
+        notFound = 404,
+        methodNotAllowed = 405,
+        conflict = 409,
+        teapot = 418,
+
+        internalServerError = 500,
+        notImplemented = 501,
+    };
+
+    Response(Status code = Status::ok);
+    Response(int code, const std::string& phrase);
+
+    void setHeader(const std::string& key, const std::string& value);
+    void setBody(const std::string& _body);
+    void setSessionId(const std::string& sessionId);
+
+    std::string getHeader() const;
+    std::string getResponse() const;
+
+    void log(bool showBody = false) const;
+
+    static Response* redirect(const std::string& url);
 
 private:
-    int code;
+    int code_;
+    std::string phrase_;
+    std::string body_;
+    utils::CiMap headers_;
 
-    std::string phrase;
-    std::string body;
-    utils::CiMap headers;
+    static const std::unordered_map<Status, std::string> phraseMap_;
 };
 
 #endif // RESPONSE_HPP_INCLUDE

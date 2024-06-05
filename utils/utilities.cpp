@@ -3,12 +3,13 @@
 #include <fstream>
 #include <vector>
 
+#include "include.hpp"
 #include "strutils.hpp"
 
 namespace utils {
 
 bool StringInsensitiveComp::operator()(const std::string& lhs, const std::string& rhs) const {
-    return tolower(lhs) < tolower(rhs);
+    return strutils::tolower(lhs) < strutils::tolower(rhs);
 }
 
 std::string readFile(const std::string& filename) {
@@ -115,9 +116,9 @@ std::string urlDecode(const std::string& url) {
 
 CiMap getCimapFromString(const std::string& str) {
     CiMap m;
-    std::vector<std::string> tokenized = split(str, '&');
+    std::vector<std::string> tokenized = strutils::split(str, '&');
     for (const std::string& token : tokenized) {
-        std::vector<std::string> keyValue = split(token, '=');
+        std::vector<std::string> keyValue = strutils::split(token, '=');
         if (keyValue.size() != 2) continue;
         m[keyValue[0]] = keyValue[1];
     }
@@ -130,7 +131,7 @@ int readMapFromFile(const std::string& filename, std::map<std::string, std::stri
 
     std::string line;
     while (std::getline(infile, line)) {
-        auto tokens = split(line, '=');
+        auto tokens = strutils::split(line, '=');
         m[tokens[0]] = tokens[(tokens.size() < 2) ? 0 : 1];
     }
 

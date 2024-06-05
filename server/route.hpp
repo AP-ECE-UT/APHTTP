@@ -3,24 +3,24 @@
 
 #include <string>
 
-#include "../utils/include.hpp"
 #include "../utils/request.hpp"
-#include "../utils/response.hpp"
 
+class Response;
 class RequestHandler;
 
 class Route {
-private:
-    Method method;
-    std::string path;
-    RequestHandler* handler;
-
 public:
-    Route(Method _method, std::string _path);
+    Route(Request::Method method, const std::string& path);
     ~Route();
-    bool isMatch(Method, std::string url);
+
+    void setHandler(RequestHandler* handler);
     Response* handle(Request* req);
-    void setHandler(RequestHandler* _handler);
+    bool isMatch(Request::Method, const std::string& url);
+
+private:
+    Request::Method method_;
+    std::string path_;
+    RequestHandler* handler_;
 };
 
 #endif // ROUTE_HPP_INCLUDE

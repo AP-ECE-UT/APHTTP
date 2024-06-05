@@ -26,58 +26,68 @@ public:
 };
 
 class ShowFile : public RequestHandler {
-    std::string filePath;
-    std::string fileType;
-
 public:
-    ShowFile(std::string filePath, std::string fileType);
-    Response* callback(Request* req);
+    ShowFile(const std::string& filePath, const std::string& fileType);
+    Response* callback(Request* req) override;
+
+private:
+    std::string filePath_;
+    std::string fileType_;
 };
 
 class ShowPage : public ShowFile {
 public:
-    ShowPage(std::string _filePath);
+    ShowPage(const std::string& filePath);
 };
 
 class ShowImage : public ShowFile {
 public:
-    ShowImage(std::string _filePath);
+    ShowImage(const std::string& filePath);
 };
 
 class TemplateHandler : public RequestHandler {
-    std::string filePath;
-    TemplateParser* parser;
-
 public:
-    TemplateHandler(std::string _filePath);
-    Response* callback(Request* req);
+    TemplateHandler(const std::string& filePath);
+    ~TemplateHandler();
+
+    Response* callback(Request* req) override;
     virtual std::map<std::string, std::string> handle(Request* req);
+
+private:
+    std::string filePath_;
+    TemplateParser* parser_;
 };
 
 class Server {
 public:
     Server(int port = 5000);
     ~Server();
+
     void run();
-    void get(std::string path, RequestHandler* handler);
-    void post(std::string path, RequestHandler* handler);
-    void setNotFoundErrPage(std::string);
+
+    void get(const std::string& path, RequestHandler* handler);
+    void post(const std::string& path, RequestHandler* handler);
+    void put(const std::string& path, RequestHandler* handler);
+    void del(const std::string& path, RequestHandler* handler);
+    void setNotFoundErrPage(const std::string& notFoundErrPage);
 
     class Exception : public std::exception {
     public:
-        Exception() {}
-        Exception(const std::string);
+        Exception() = default;
+        Exception(const std::string message);
         std::string getMessage() const;
 
     private:
-        std::string message;
+        std::string message_;
     };
 
 private:
-    SOCKET sc;
-    int port;
-    std::vector<Route*> routes;
-    RequestHandler* notFoundHandler;
+    SOCKET sc_;
+    int port_;
+    std::vector<Route*> routes_;
+    RequestHandler* notFoundHandler_;
+
+    void mapRequest(const std::string& path, RequestHandler* handler, Request::Method method);
 };
 
 #endif // SERVER_HPP_INCLUDE

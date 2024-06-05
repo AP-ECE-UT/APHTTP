@@ -58,25 +58,26 @@ static const char* getSocketError() {
 using namespace std;
 
 class NotFoundHandler : public RequestHandler {
-    string notFoundErrPage;
-
 public:
-    NotFoundHandler(string notFoundErrPage = "")
-        : notFoundErrPage(notFoundErrPage) {}
+    NotFoundHandler(const string& notFoundErrPage = "")
+        : notFoundErrPage_(notFoundErrPage) {}
     Response* callback(Request* req) {
-        Response* res = new Response(404);
-        if (!notFoundErrPage.empty()) {
-            res->setHeader("Content-Type", "text/" + utils::getExtension(notFoundErrPage));
-            res->setBody(utils::readFile(notFoundErrPage));
+        Response* res = new Response(Response::Status::notFound);
+        if (!notFoundErrPage_.empty()) {
+            res->setHeader("Content-Type", "text/" + utils::getExtension(notFoundErrPage_));
+            res->setBody(utils::readFile(notFoundErrPage_));
         }
         return res;
     }
+
+private:
+    string notFoundErrPage_;
 };
 
 class ServerErrorHandler {
 public:
-    static Response* callback(string msg) {
-        Response* res = new Response(500);
+    static Response* callback(const string& msg) {
+        Response* res = new Response(Response::Status::internalServerError);
         res->setHeader("Content-Type", "application/json");
         res->setBody("{ \"code\": \"500\", \"message\": \"" + msg + "\" }\n");
         return res;
@@ -96,13 +97,13 @@ Request* parseRawReq(char* reqData, size_t length) {
         if (endOfHeader == string::npos) {
             throw Server::Exception("End of request header not found.");
         }
-        vector<string> headers = utils::split(reqHeader, "\r\n");
+        vector<string> headers = strutils::split(reqHeader, "\r\n");
         if (reqHeader.find('\0') != string::npos) {
             throw Server::Exception("Binary data in header.");
         }
         size_t realBodySize = length - endOfHeader - 4; // string("\r\n\r\n").size();
 
-        vector<string> R = utils::split(headers[0], ' ');
+        vector<string> R = strutils::split(headers[0], ' ');
         if (R.size() != 3) {
             throw Server::Exception("Invalid header (request line)");
         }
@@ -110,9 +111,9 @@ Request* parseRawReq(char* reqData, size_t length) {
         req->setPath(R[1]);
         size_t pos = req->getPath().find('?');
         if (pos != string::npos && pos != req->getPath().size() - 1) {
-            vector<string> Q1 = utils::split(req->getPath().substr(pos + 1), '&');
+            vector<string> Q1 = strutils::split(req->getPath().substr(pos + 1), '&');
             for (vector<string>::size_type q = 0; q < Q1.size(); q++) {
-                vector<string> Q2 = utils::split(Q1[q], '=');
+                vector<string> Q2 = strutils::split(Q1[q], '=');
                 if (Q2.size() == 2)
                     req->setQueryParam(Q2[0], Q2[1], false);
                 else
@@ -123,23 +124,23 @@ Request* parseRawReq(char* reqData, size_t length) {
 
         for (size_t headerIndex = 1; headerIndex < headers.size(); headerIndex++) {
             string line = headers[headerIndex];
-            vector<string> R = utils::split(line, ": ");
+            vector<string> R = strutils::split(line, ": ");
             if (R.size() != 2)
                 throw Server::Exception("Invalid header");
             req->setHeader(R[0], R[1], false);
-            if (utils::tolower(R[0]) == utils::tolower("Content-Length"))
+            if (strutils::tolower(R[0]) == strutils::tolower("Content-Length"))
                 if (realBodySize != (size_t)atol(R[1].c_str()))
                     return nullptr;
         }
 
         string contentType = req->getHeader("Content-Type");
         if (realBodySize != 0 && !contentType.empty()) {
-            if (utils::startsWith(contentType, "application/x-www-form-urlencoded")) {
-                vector<string> urlencodedParts = utils::split(reqBody, "\r\n");
+            if (strutils::startsWith(contentType, "application/x-www-form-urlencoded")) {
+                vector<string> urlencodedParts = strutils::split(reqBody, "\r\n");
                 for (const string& part : urlencodedParts) {
-                    vector<string> body = utils::split(part, '&');
+                    vector<string> body = strutils::split(part, '&');
                     for (size_t i = 0; i < body.size(); i++) {
-                        vector<string> field = utils::split(body[i], '=');
+                        vector<string> field = strutils::split(body[i], '=');
                         if (field.size() == 2)
                             req->setBodyParam(field[0], field[1], "application/x-www-form-urlencoded", false);
                         else if (field.size() == 1)
@@ -149,7 +150,7 @@ Request* parseRawReq(char* reqData, size_t length) {
                     }
                 }
             }
-            else if (utils::startsWith(contentType, "multipart/form-data")) {
+            else if (strutils::startsWith(contentType, "multipart/form-data")) {
                 boundary = contentType.substr(contentType.find("boundary=") + 9);
                 size_t firstBoundary = reqBody.find("--" + boundary);
                 if (firstBoundary == string::npos) {
@@ -157,7 +158,7 @@ Request* parseRawReq(char* reqData, size_t length) {
                 }
                 reqBody.erase(reqBody.begin(), reqBody.begin() + firstBoundary + 2 + boundary.size());
 
-                vector<string> boundaries = utils::split(reqBody, "--" + boundary);
+                vector<string> boundaries = strutils::split(reqBody, "--" + boundary);
                 boundaries.pop_back();
 
                 for (string b : boundaries) {
@@ -167,19 +168,19 @@ Request* parseRawReq(char* reqData, size_t length) {
                     string boundaryContentType = "text/plain";
 
                     size_t endOfBoundaryHeader = b.find("\r\n\r\n") + 4;
-                    vector<string> abc = utils::split(b.substr(0, endOfBoundaryHeader - 4), "\r\n");
+                    vector<string> abc = strutils::split(b.substr(0, endOfBoundaryHeader - 4), "\r\n");
                     for (const string& line : abc) {
                         if (line.empty()) {
                             break;
                         }
-                        vector<string> R = utils::split(line, ": ");
+                        vector<string> R = strutils::split(line, ": ");
                         if (R.size() != 2) throw Server::Exception("Invalid header");
-                        if (utils::tolower(R[0]) == utils::tolower("Content-Disposition")) {
-                            vector<string> A = utils::split(R[1], "; ");
+                        if (strutils::tolower(R[0]) == strutils::tolower("Content-Disposition")) {
+                            vector<string> A = strutils::split(R[1], "; ");
                             for (size_t i = 0; i < A.size(); i++) {
-                                vector<string> attr = utils::split(A[i], '=');
+                                vector<string> attr = strutils::split(A[i], '=');
                                 if (attr.size() == 2) {
-                                    if (utils::tolower(attr[0]) == utils::tolower("name")) {
+                                    if (strutils::tolower(attr[0]) == strutils::tolower("name")) {
                                         lastFieldKey = attr[1].substr(1, attr[1].size() - 2);
                                     }
                                 }
@@ -188,8 +189,8 @@ Request* parseRawReq(char* reqData, size_t length) {
                                 }
                             }
                         }
-                        else if (utils::tolower(R[0]) == utils::tolower("Content-Type")) {
-                            boundaryContentType = utils::tolower(R[1]);
+                        else if (strutils::tolower(R[0]) == strutils::tolower("Content-Type")) {
+                            boundaryContentType = strutils::tolower(R[1]);
                         }
                     }
                     lastFieldValue = b.substr(endOfBoundaryHeader);
@@ -210,7 +211,7 @@ Request* parseRawReq(char* reqData, size_t length) {
     return req;
 }
 
-Server::Server(int _port) : port(_port) {
+Server::Server(int port) : port_(port) {
 #ifdef _WIN32
     WSADATA wsa_data;
     int initializeResult = WSAStartup(MAKEWORD(2, 2), &wsa_data);
@@ -220,44 +221,54 @@ Server::Server(int _port) : port(_port) {
     }
 #endif
 
-    notFoundHandler = new NotFoundHandler();
+    notFoundHandler_ = new NotFoundHandler();
 
-    sc = socket(AF_INET, SOCK_STREAM, 0);
+    sc_ = socket(AF_INET, SOCK_STREAM, 0);
     int sc_option = 1;
 
 #ifdef _WIN32
-    setsockopt(sc, SOL_SOCKET, SO_REUSEADDR, (char*)&sc_option,
-               sizeof(sc_option));
+    setsockopt(sc_, SOL_SOCKET, SO_REUSEADDR, (char*)&sc_option, sizeof(sc_option));
 #else
-    setsockopt(sc, SOL_SOCKET, SO_REUSEADDR, &sc_option, sizeof(sc_option));
+    setsockopt(sc_, SOL_SOCKET, SO_REUSEADDR, &sc_option, sizeof(sc_option));
 #endif
-    if (!ISVALIDSOCKET(sc))
+    if (!ISVALIDSOCKET(sc_)) {
         throw Exception("Error on opening socket: " + string(getSocketError()));
+    }
 
     struct sockaddr_in serv_addr;
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
-    serv_addr.sin_port = htons(port);
+    serv_addr.sin_port = htons(port_);
 
-    if (::bind(sc, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) != 0) {
+    if (::bind(sc_, (struct sockaddr*)&serv_addr, sizeof(serv_addr)) != 0) {
         throw Exception("Error on binding: " + string(getSocketError()));
     }
 }
 
-void Server::get(string path, RequestHandler* handler) {
-    Route* route = new Route(GET, path);
+void Server::mapRequest(const string& path, RequestHandler* handler, Request::Method method) {
+    Route* route = new Route(method, path);
     route->setHandler(handler);
-    routes.push_back(route);
+    routes_.push_back(route);
 }
 
-void Server::post(string path, RequestHandler* handler) {
-    Route* route = new Route(POST, path);
-    route->setHandler(handler);
-    routes.push_back(route);
+void Server::get(const std::string& path, RequestHandler* handler) {
+    mapRequest(path, handler, Request::Method::GET);
+}
+
+void Server::post(const std::string& path, RequestHandler* handler) {
+    mapRequest(path, handler, Request::Method::POST);
+}
+
+void Server::put(const std::string& path, RequestHandler* handler) {
+    mapRequest(path, handler, Request::Method::PUT);
+}
+
+void Server::del(const std::string& path, RequestHandler* handler) {
+    mapRequest(path, handler, Request::Method::DEL);
 }
 
 void Server::run() {
-    ::listen(sc, 10);
+    ::listen(sc_, 10);
 
     struct sockaddr_in cli_addr;
     socklen_t clilen;
@@ -265,14 +276,14 @@ void Server::run() {
     SOCKET newsc;
 
     while (true) {
-        newsc = ::accept(sc, (struct sockaddr*)&cli_addr, &clilen);
+        newsc = ::accept(sc_, (struct sockaddr*)&cli_addr, &clilen);
         if (!ISVALIDSOCKET(newsc))
             throw Exception("Error on accept: " + string(getSocketError()));
-        Response* res = NULL;
+        Response* res = nullptr;
         try {
             char* data = new char[BUFSIZE + 1];
             size_t recv_len, recv_total_len = 0;
-            Request* req = NULL;
+            Request* req = nullptr;
             while (!req) {
                 recv_len = recv(newsc, data + recv_total_len, BUFSIZE - recv_total_len, 0);
                 if (recv_len > 0) {
@@ -290,14 +301,14 @@ void Server::run() {
             }
             req->log();
             size_t i = 0;
-            for (; i < routes.size(); i++) {
-                if (routes[i]->isMatch(req->getMethod(), req->getPath())) {
-                    res = routes[i]->handle(req);
+            for (; i < routes_.size(); i++) {
+                if (routes_[i]->isMatch(req->getMethod(), req->getPath())) {
+                    res = routes_[i]->handle(req);
                     break;
                 }
             }
-            if (i == routes.size() && notFoundHandler) {
-                res = notFoundHandler->callback(req);
+            if (i == routes_.size() && notFoundHandler_) {
+                res = notFoundHandler_->callback(req);
             }
             delete req;
         }
@@ -305,9 +316,9 @@ void Server::run() {
             delete res;
             res = ServerErrorHandler::callback(exc.getMessage());
         }
-        int si;
         res->log();
-        string res_data = res->print(si);
+        string res_data = res->getResponse();
+        int si = res_data.size();
         delete res;
         int wr = send(newsc, res_data.c_str(), si, 0);
         if (wr != si)
@@ -317,57 +328,60 @@ void Server::run() {
 }
 
 Server::~Server() {
-    if (sc >= 0)
-        CLOSESOCKET(sc);
-    delete notFoundHandler;
-    for (size_t i = 0; i < routes.size(); ++i)
-        delete routes[i];
-
+    if (sc_ >= 0) {
+        CLOSESOCKET(sc_);
+    }
+    delete notFoundHandler_;
+    for (size_t i = 0; i < routes_.size(); ++i) {
+        delete routes_[i];
+    }
 #ifdef _WIN32
     WSACleanup();
 #endif
 }
 
-Server::Exception::Exception(const string msg) { message = msg; }
+Server::Exception::Exception(const string message) : message_(message) {}
 
-string Server::Exception::getMessage() const { return message; }
+string Server::Exception::getMessage() const { return message_; }
 
-ShowFile::ShowFile(string _filePath, string _fileType) {
-    filePath = _filePath;
-    fileType = _fileType;
-}
+ShowFile::ShowFile(const string& filePath, const string& fileType)
+    : filePath_(filePath),
+      fileType_(fileType) {}
 
 Response* ShowFile::callback(Request* req) {
-    Response* res = new Response;
-    res->setHeader("Content-Type", fileType);
-    res->setBody(utils::readFile(filePath));
+    Response* res = new Response();
+    res->setHeader("Content-Type", fileType_);
+    res->setBody(utils::readFile(filePath_));
     return res;
 }
 
-ShowPage::ShowPage(string filePath)
+ShowPage::ShowPage(const string& filePath)
     : ShowFile(filePath, "text/" + utils::getExtension(filePath)) {}
 
-ShowImage::ShowImage(string filePath)
+ShowImage::ShowImage(const string& filePath)
     : ShowFile(filePath, "image/" + utils::getExtension(filePath)) {}
 
-void Server::setNotFoundErrPage(std::string notFoundErrPage) {
-    delete notFoundHandler;
-    notFoundHandler = new NotFoundHandler(notFoundErrPage);
+void Server::setNotFoundErrPage(const std::string& notFoundErrPage) {
+    delete notFoundHandler_;
+    notFoundHandler_ = new NotFoundHandler(notFoundErrPage);
 }
 
 RequestHandler::~RequestHandler() {}
 
-TemplateHandler::TemplateHandler(string _filePath) {
-    filePath = _filePath;
-    parser = new TemplateParser(filePath);
+TemplateHandler::TemplateHandler(const string& filePath)
+    : filePath_(filePath),
+      parser_(new TemplateParser(filePath)) {}
+
+TemplateHandler::~TemplateHandler() {
+    delete parser_;
 }
 
 Response* TemplateHandler::callback(Request* req) {
     map<string, string> context;
     context = this->handle(req);
-    Response* res = new Response;
+    Response* res = new Response();
     res->setHeader("Content-Type", "text/html");
-    res->setBody(parser->getHtml(context));
+    res->setBody(parser_->getHtml(context));
     return res;
 }
 
